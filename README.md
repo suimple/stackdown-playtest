@@ -18,7 +18,7 @@ It's one self-contained file, `index.html` — no build step, no dependencies. O
 - Empty your **Reserve** pile for +10; every card left at the buzzer is −2.
 - Scoring: +1 per card to the pot, +5 Crown (play a King), +1 combo while you're hot, +10 reserve clear, −2 per leftover reserve card.
 
-There's a 30-second guided tutorial on the start screen, and a **?** button for the rules anytime.
+There's a 30-second guided tutorial on the start screen, and a **?** button for the rules anytime. At the buzzer, **📲 Share my result** opens your phone's share sheet (Messages, etc.) with a quick brag card and a link back to the game.
 
 ## Feedback
 
@@ -43,4 +43,4 @@ Share that link with testers — it works on phones and desktops.
 
 ## Roadmap (not in this build)
 
-Real-time multiplayer, accounts, daily-game scarcity, persistent groups/favorites, leaderboards, the shareable results card, and monetization are all later phases that build on this validated core.
+Real-time multiplayer, accounts, daily-game scarcity, persistent groups/favorites, leaderboards, and monetization are all later phases that build on this validated core.

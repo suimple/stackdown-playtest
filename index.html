@@ -79,8 +79,11 @@
   .subt.res{color:var(--good);font-weight:800}
   .slot .lab b{color:var(--good)}
 
-  .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
-  .slot{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;touch-action:none}
+  .slot{display:flex;flex-direction:column;align-items:center;gap:4px;touch-action:none}
+  /* generous, scroll-proof tap zone around the tray cards (esp. the reserve) */
+  #reserve,#stock,#waste{touch-action:none;padding:5px;margin:-5px;border-radius:12px}
+  #reserve:active{background:rgba(25,224,200,.10)}
   .slot .lab{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
   .works{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .work{min-height:150px;background:rgba(255,255,255,.02);border:1px dashed #2c2f52;border-radius:10px;padding:6px;position:relative;touch-action:none;transition:box-shadow .1s,border-color .1s,background .1s,transform .1s}
@@ -90,7 +93,7 @@
   .workcol{position:relative}
 
   .card{width:var(--cw);height:var(--ch);border-radius:7px;position:relative;
-    --cw:clamp(40px,12.5vw,58px);--ch:calc(var(--cw)*1.42);
+    --cw:clamp(46px,13.5vw,60px);--ch:calc(var(--cw)*1.42);
     background:var(--card);border:1px solid var(--card-edge);box-shadow:0 1px 2px rgba(0,0,0,.4);touch-action:none;}
   .card .crn{position:absolute;top:3px;left:5px;font-weight:800;line-height:1;font-size:calc(var(--cw)*.30);letter-spacing:-.5px}
   .card .pip{position:absolute;bottom:3px;right:5px;font-size:calc(var(--cw)*.34);line-height:1}
@@ -102,7 +105,7 @@
   .card.lifted{opacity:.28}
   .card.teach{box-shadow:0 0 0 2px var(--gold),0 0 18px rgba(255,210,63,.85);animation:goldpulse 1.15s infinite;z-index:3}
   @keyframes goldpulse{50%{box-shadow:0 0 0 2px var(--gold),0 0 26px rgba(255,210,63,1)}}
-  .card.mini{--cw:clamp(34px,10vw,46px)}
+  .card.mini{--cw:clamp(40px,11vw,48px)}
   .fan>.card{position:absolute;left:0;width:100%}
   .card.enter{animation:enter .3s ease-out}
   @keyframes enter{0%{transform:scale(.6) rotate(-7deg);opacity:0;box-shadow:0 0 0 2px var(--p0),0 0 18px rgba(25,224,200,.8)}55%{transform:scale(1.08)}100%{transform:scale(1)}}
@@ -239,7 +242,10 @@
     <h1 id="endtitle">Time!</h1>
     <div class="tag" id="endsub"></div>
     <div class="podium" id="podium"></div>
-    <div class="row"><button class="btn" id="again" style="flex:1">Play again</button><button class="btn alt" id="fbresults" style="flex:1">Feedback</button></div>
+    <div class="row" style="flex-direction:column">
+      <button class="btn" id="share" style="width:100%">📲 Share my result</button>
+      <div class="row" style="width:100%"><button class="btn alt" id="again" style="flex:1">Play again</button><button class="btn alt" id="fbresults" style="flex:1">Feedback</button></div>
+    </div>
   </div>
 </div>
 
@@ -265,7 +271,7 @@
   // ""  → Send copies the feedback to the tester's clipboard to paste back.
   const FEEDBACK_URL = "mailto:jakeschirm@gmail.com";
 
-  let matchesPlayed=0, wins=0;
+  let matchesPlayed=0, wins=0, lastResult=null;
   const SUITS=["H","D","C","S"], REDS={H:1,D:1};
   const PCOLORS=["--p0","--p1","--p2","--p3"];
   const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
@@ -286,7 +292,7 @@
     for(let i=d.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[d[i],d[j]]=[d[j],d[i]];}return d;}
   function newPlayer(i){const deck=makeDeck(i);return{index:i,name:NAMES[i],color:PCOLORS[i],isBot:i!==0,
     reserve:deck.slice(0,13),work:[[deck[13]],[deck[14]],[deck[15]],[deck[16]]],stock:deck.slice(17),waste:[],
-    score:0,potCards:0,cleared:false,cleanAwarded:false,potTimes:[],_t:null};}
+    score:0,potCards:0,crowns:0,cleared:false,cleanAwarded:false,potTimes:[],_t:null};}
   function setup(){players=[];for(let i=0;i<NPLAYERS;i++)players.push(newPlayer(i));foundations=[];timeLeft=MATCH_SECS;running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;}
   function setupTutorial(){NPLAYERS=1;players=[newPlayer(0)];foundations=[];running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;
     const p=players[0];const pool=[...p.reserve,...p.work.flat(),...p.stock];const aces=[],rest=[];
@@ -303,7 +309,7 @@
 
   // scoring
   function award(p,card){p.score+=1;p.potCards+=1;const now=performance.now();p.potTimes.push(now);p.potTimes=p.potTimes.filter(t=>now-t<=STREAK_WINDOW);
-    let txt="+1",cls=p.color,big=false;if(p.potTimes.length>=3){p.score+=1;txt="+2";}if(card.rank===13){p.score+=5;txt="+5 CROWN";big=true;cls="--gold";}
+    let txt="+1",cls=p.color,big=false;if(p.potTimes.length>=3){p.score+=1;txt="+2";}if(card.rank===13){p.score+=5;p.crowns+=1;txt="+5 CROWN";big=true;cls="--gold";}
     pop(txt,null,cls,big);if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");}}
   function checkClear(p){if(!p.cleared&&p.reserve.length===0){p.cleared=true;if(!p.cleanAwarded){p.cleanAwarded=true;p.score+=10;pop("+10 CLEAR!",null,p.color,true);if(p.isBot)flashOpp(p.index);}}}
   const net=p=>p.score-2*p.reserve.length;
@@ -365,7 +371,7 @@
     hint(`No spot there. ${rankTxt(mb.rank)}${suitSym(mb.suit)} needs a ${mb.rank===13?"empty pile":opp+" "+rankTxt(mb.rank+1)} to stack, or its slot in the pot.`,"warn");
     render();}
 
-  function attachDrag(el,src){el.classList.add("grab");el.addEventListener("pointerdown",e=>{if(e.button!==undefined&&e.button>0)return;e.preventDefault();beginDrag(src,el,e.clientX,e.clientY);});}
+  function attachDrag(el,src){el.classList.add("grab");el.addEventListener("pointerdown",e=>{if(e.button!==undefined&&e.button>0)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}beginDrag(src,el,e.clientX,e.clientY);});}
 
   // ---- tap-to-play + target highlighting ----
   // Tap a card: if it fits exactly one good spot (the pot, or a real stack) play it there.
@@ -503,6 +509,8 @@
   function startMatch(){startRealMatch();}
   function endGame(){running=false;clearInterval(timerId);stopBots();
     const ranked=players.map(p=>({p,final:net(p)})).sort((a,b)=>b.final-a.final||b.p.potCards-a.p.potCards);const win=ranked[0].p;
+    const you0=players[0],myPlace=ranked.findIndex(r=>r.p.index===0)+1;
+    lastResult={place:myPlace,n:net(you0),pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0};
     matchesPlayed++; if(win.index===0) wins++;
     $("endtitle").textContent=win.index===0?"You win!":win.name+" wins";
     $("endsub").textContent=win.index===0?"You stacked down the most. Net "+ranked[0].final+".":"Final standings — net is pot + bonuses − reserve penalty.";
@@ -524,6 +532,22 @@
   // feedback
   const fb={fun:null,pace:null,clear:null};
   document.querySelectorAll(".fbseg").forEach(g=>g.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{g.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fb[g.dataset.k]=b.dataset.v;})));
+  // ---- shareable result (mobile-first, viral) ----
+  function fmtSecs(s){return Math.floor(s/60)+":"+((s%60)<10?"0":"")+(s%60);}
+  function shareText(r){
+    const medal=["","🥇","🥈","🥉","🏅"][r.place]||"🏅";
+    const ord=["","1st","2nd","3rd","4th"][r.place]||(r.place+"th");
+    let line=`🃏 ${r.pot} cards to the pot`;
+    if(r.crowns)line+=` · 👑 ${r.crowns}`;
+    if(r.cleared)line+=` · ✅ cleared!`;
+    const taunt=r.won?"Can you take the crown? 🏆":"Bet you can't beat me 😤";
+    const url=location.origin+location.pathname;
+    return `STACKDOWN ⚡ ${fmtSecs(r.secs)} race\n${medal} ${ord} of ${r.players} · net ${r.n}\n${line}\n${taunt}\n👉 ${url}`;}
+  function shareResult(){
+    const r=lastResult;if(!r)return;const text=shareText(r);
+    if(navigator.share){navigator.share({title:"Stackdown",text:text}).catch(function(){});}
+    else{copyText(text);toast("Result copied — paste it into a text! 📲",2800);}}
+
   function openFeedback(){$("endov").style.display="none";$("fbov").style.display="flex";}
   function closeFeedback(){$("fbov").style.display="none";}
   function copyText(t){try{if(navigator.clipboard)navigator.clipboard.writeText(t);}catch(e){}}
@@ -538,6 +562,7 @@
     else { copyText(summary); toast("Feedback copied — paste it back to the developer. Thank you!",2800); }
     closeFeedback();
   }
+  $("share").addEventListener("click",shareResult);
   $("fbbtn").addEventListener("click",openFeedback);
   $("fbresults").addEventListener("click",openFeedback);
   $("fbclose").addEventListener("click",closeFeedback);
