@@ -1,0 +1,513 @@
+<!--
+  STACKDOWN — Core Match Prototype v6  (playtest build)
+  Single-player vs adaptive bots. A "feel test" you can hand to others.
+
+  ───────────────────────────────────────────────────────────────────────
+  TO COLLECT FEEDBACK: find  const FEEDBACK_URL  in the script below.
+    • Easiest: set it to  "mailto:you@example.com"  → testers' Send button
+      opens a pre-filled email to you.
+    • Or paste a Google Form / Typeform URL.
+    • Leave it ""  → feedback is copied to the tester's clipboard to paste back.
+  TO SHARE A LINK: rename this file to  index.html , then either
+    • drag it onto  app.netlify.com/drop  (instant link), or
+    • put it in a GitHub repo and turn on Pages, or
+    • zip it and upload to itch.io as an HTML5 game.
+  (See the separate sharing guide for step-by-step.)
+  ───────────────────────────────────────────────────────────────────────
+-->
+<meta charset="utf-8" />
+<title>Stackdown · Playtest</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --table:#171a2b;--table-2:#1f2440;--ink:#e9e6f2;--muted:#8b90b5;
+    --card:#f7f3e8;--card-edge:#d8d2bf;--red:#d6324a;--black:#23253a;
+    --p0:#19e0c8;--p1:#ff4d9d;--p2:#ffd23f;--p3:#ff7a3c;
+    --gold:#ffd23f;--good:#46e08a;--bevel-lt:rgba(255,255,255,.35);--bevel-dk:rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(120% 80% at 50% -10%, #252a4d 0%, var(--table) 55%, #0f1120 100%);
+    color:var(--ink);-webkit-user-select:none;user-select:none;overflow-x:hidden;touch-action:manipulation;}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 12px 30px;position:relative}
+
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .brand{font-weight:900;letter-spacing:2px;font-size:20px;text-transform:uppercase;
+    background:linear-gradient(180deg,#fff,#9be9df 60%,#19e0c8);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 18px rgba(25,224,200,.25);}
+  .brand small{display:block;font-size:9px;letter-spacing:3px;color:var(--muted);-webkit-text-fill-color:var(--muted);margin-top:-2px}
+  .bar-right{display:flex;align-items:center;gap:8px}
+  .help{width:30px;height:30px;border-radius:50%;background:#0e1022;border:1px solid #2c2f52;color:var(--muted);font-weight:800;cursor:pointer;font-size:15px}
+  .timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:24px;letter-spacing:1px;padding:4px 12px;border-radius:10px;background:#0e1022;border:1px solid #2c2f52;min-width:92px;text-align:center}
+  .timer.heat{color:#fff;background:#3a0d1c;border-color:var(--red);animation:pulse .7s infinite;box-shadow:0 0 24px rgba(214,50,74,.6)}
+  .timer.practice{font-size:13px;letter-spacing:2px;color:var(--good);border-color:#1f5a3a;background:#0c1f17}
+  @keyframes pulse{50%{box-shadow:0 0 38px rgba(255,90,120,.95)}}
+
+  .opps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+  .opps.solo{display:none}
+  .opp{background:#0e1022;border:1px solid #262a4d;border-radius:12px;padding:8px 10px;position:relative;overflow:hidden}
+  .opp .nm{font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 8px currentColor}
+  .opp .net{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
+  .opp .sub{font-size:10px;color:var(--muted)}
+  .opp.flash{animation:flash .5s}
+  @keyframes flash{0%{background:#1b2147}100%{background:#0e1022}}
+
+  .pot-h{display:flex;align-items:center;gap:8px;margin:6px 2px}
+  .pot-h b{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .pot-h .line{flex:1;height:1px;background:linear-gradient(90deg,#2c2f52,transparent)}
+  .pot{min-height:96px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px;border-radius:14px;
+    background:repeating-linear-gradient(45deg,#1a1f3d 0 12px,#191d39 12px 24px);border:1px solid #2c2f52;touch-action:none;transition:box-shadow .12s,outline-color .12s}
+  .pot.drop-ok{outline:3px dashed var(--gold);outline-offset:3px;box-shadow:inset 0 0 30px rgba(255,210,63,.25)}
+  .pot.drop-hot{outline:3px solid var(--gold);outline-offset:3px;box-shadow:inset 0 0 46px rgba(255,210,63,.55)}
+  .pot .empty{color:var(--muted);font-size:13px;align-self:center;padding:18px 8px;text-align:center}
+
+  .hintbar{display:flex;align-items:center;gap:8px;margin:10px 2px 2px;min-height:34px;background:#0e1022;border:1px solid #2c2f52;border-radius:10px;padding:7px 10px;font-size:13px;line-height:1.3}
+  .hintbar .ic{flex:0 0 auto;font-size:15px}
+  .hintbar .txt{flex:1}
+  .hintbar.warn{border-color:#6b3a44;background:#1f1418;color:#ffd9df}
+  .hintbar .hintbtn{flex:0 0 auto;font:inherit;font-weight:800;font-size:12px;color:var(--ink);background:#1a1f3d;border:1px solid #2c2f52;border-radius:8px;padding:5px 10px;cursor:pointer}
+
+  .you-h{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 6px}
+  .you-h .who{display:flex;align-items:center;gap:8px;font-weight:800}
+  .combo{font-weight:900;letter-spacing:1px;color:var(--gold);opacity:0;transition:opacity .2s;text-shadow:0 0 14px rgba(255,210,63,.8)}
+  .combo.on{opacity:1}
+  .you-net{font-size:13px;color:var(--muted)}.you-net b{color:var(--ink);font-size:18px}
+
+  .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+  .slot{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .slot .lab{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+  .works{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .work{min-height:150px;background:rgba(255,255,255,.02);border:1px dashed #2c2f52;border-radius:10px;padding:6px;position:relative;touch-action:none;transition:box-shadow .1s,border-color .1s,background .1s,transform .1s}
+  .work.drop-ok{border:2px dashed var(--good);background:rgba(70,224,138,.08)}
+  .work.drop-hot{border:2px solid var(--good);background:rgba(70,224,138,.22);box-shadow:0 0 24px rgba(70,224,138,.75);transform:scale(1.04)}
+  .work.drop-ok::after{content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%);width:18px;height:3px;border-radius:2px;background:var(--good)}
+  .workcol{position:relative}
+
+  .card{width:var(--cw);height:var(--ch);border-radius:7px;position:relative;
+    --cw:clamp(40px,12.5vw,58px);--ch:calc(var(--cw)*1.42);
+    background:var(--card);border:1px solid var(--card-edge);box-shadow:0 1px 2px rgba(0,0,0,.4);touch-action:none;}
+  .card .crn{position:absolute;top:3px;left:5px;font-weight:800;line-height:1;font-size:calc(var(--cw)*.30);letter-spacing:-.5px}
+  .card .pip{position:absolute;bottom:3px;right:5px;font-size:calc(var(--cw)*.34);line-height:1}
+  .card.red{color:var(--red)}.card.black{color:var(--black)}
+  .card.back{background:repeating-linear-gradient(45deg,var(--bc) 0 7px, color-mix(in srgb,var(--bc) 70%, #000) 7px 14px);border-color:rgba(255,255,255,.25)}
+  .card.back::after{content:"";position:absolute;inset:5px;border-radius:4px;border:1.5px solid rgba(255,255,255,.35)}
+  .card.grab{cursor:grab}
+  .card.grab:hover{box-shadow:0 3px 8px rgba(0,0,0,.5);transform:translateY(-2px)}
+  .card.lifted{opacity:.28}
+  .card.teach{box-shadow:0 0 0 2px var(--gold),0 0 18px rgba(255,210,63,.85);animation:goldpulse 1.15s infinite;z-index:3}
+  @keyframes goldpulse{50%{box-shadow:0 0 0 2px var(--gold),0 0 26px rgba(255,210,63,1)}}
+  .card.mini{--cw:clamp(34px,10vw,46px)}
+  .fan>.card{position:absolute;left:0;width:100%}
+  .card.enter{animation:enter .3s ease-out}
+  @keyframes enter{0%{transform:scale(.6) rotate(-7deg);opacity:0;box-shadow:0 0 0 2px var(--p0),0 0 18px rgba(25,224,200,.8)}55%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+  .ph{width:var(--cw);height:var(--ch);--cw:clamp(40px,12.5vw,58px);--ch:calc(var(--cw)*1.42);border-radius:7px;border:1.5px dashed #3a3f6b;display:flex;align-items:center;justify-content:center;color:#3a3f6b;font-size:20px}
+  .count{position:absolute;bottom:-7px;right:-7px;background:#0e1022;border:1px solid #2c2f52;color:var(--ink);font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px}
+  .stock{cursor:pointer}
+  .fnd{position:relative}
+  .fnd .crown{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:13px;filter:drop-shadow(0 0 6px var(--gold))}
+  .fnd.hit{animation:hit .35s}
+  @keyframes hit{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+
+  /* drag ghost */
+  .draglayer{position:fixed;z-index:80;pointer-events:none;left:0;top:0}
+  .draglayer .card{position:absolute;left:0;box-shadow:0 8px 22px rgba(0,0,0,.55);transform:rotate(-3deg)}
+
+  .btn{font:inherit;font-weight:800;letter-spacing:.5px;color:#0e1022;cursor:pointer;background:linear-gradient(180deg,#8af0e4,#19e0c8);border:none;border-radius:10px;padding:11px 18px;box-shadow:inset 1px 1px 0 var(--bevel-lt),inset -2px -2px 0 var(--bevel-dk),0 4px 0 #0d8c7e;transition:transform .05s}
+  .btn:active{transform:translateY(2px);box-shadow:inset 1px 1px 0 var(--bevel-lt),inset -2px -2px 0 var(--bevel-dk),0 2px 0 #0d8c7e}
+  .btn.alt{background:linear-gradient(180deg,#3a3f6b,#262a4d);color:#fff;box-shadow:inset 1px 1px 0 rgba(255,255,255,.15),inset -2px -2px 0 rgba(0,0,0,.4),0 4px 0 #14172c}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .linkbtn{background:none;border:none;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer;font-size:12px}
+
+  .ov{position:fixed;inset:0;background:rgba(8,9,20,.82);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .panel{background:linear-gradient(180deg,#1c2142,#141833);border:1px solid #343a66;border-radius:18px;max-width:460px;width:100%;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .panel h1{margin:0 0 2px;font-size:30px;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(180deg,#fff,#19e0c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .panel .tag{color:var(--muted);font-size:12px;margin-bottom:16px;letter-spacing:.5px;line-height:1.5}
+  .opt{margin:12px 0}
+  .opt .lab{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;font:inherit;font-weight:800;padding:9px;border-radius:9px;cursor:pointer;background:#0e1022;border:1px solid #2c2f52;color:var(--muted)}
+  .seg button.on{background:var(--p0);color:#0e1022;border-color:var(--p0)}
+  .legend{font-size:12px;color:var(--ink);line-height:1.7;margin-top:6px}
+  .legend .k{display:inline-flex;align-items:center;gap:5px;font-weight:800}
+  .swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  .podium{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+  .pr{display:flex;align-items:center;gap:10px;background:#0e1022;border:1px solid #2c2f52;border-radius:10px;padding:10px 12px}
+  .pr .rk{font-weight:900;font-size:18px;width:26px;color:var(--muted)}
+  .pr.win{border-color:var(--gold);box-shadow:0 0 22px rgba(255,210,63,.35)}
+  .pr .nm{font-weight:800;flex:1;display:flex;align-items:center;gap:7px}
+  .pr .sc{font-weight:900;font-size:20px;font-variant-numeric:tabular-nums}
+  .pr .bd{font-size:10px;color:var(--muted)}
+  .cascade{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+  .cc{position:absolute;width:34px;height:48px;border-radius:5px;background:var(--card);border:1px solid var(--card-edge);will-change:transform}
+
+  .coach{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:48;width:min(680px,94vw);background:linear-gradient(180deg,#243056,#182142);border:1px solid #3f64b8;border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:none}
+  .coach.on{display:block}
+  .coach .step{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#8fb2ff;margin-bottom:3px}
+  .coach .msg{font-size:14px;line-height:1.45}
+  .coach .acts{display:flex;gap:10px;align-items:center;margin-top:10px}
+
+  #fx{position:fixed;inset:0;pointer-events:none;z-index:40}
+  .pop{position:absolute;font-weight:900;font-size:20px;transform:translate(-50%,-50%);text-shadow:0 2px 8px rgba(0,0,0,.6);animation:pop 1s ease-out forwards}
+  .pop.big{font-size:30px}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-160%) scale(1.05)}}
+  .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:45;background:#0e1022;border:1px solid #343a66;color:var(--ink);padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;max-width:90vw;text-align:center}
+  .toast.on{opacity:1}
+</style>
+
+<div class="wrap" id="wrap">
+  <div class="bar">
+    <div class="brand">Stackdown<small>playtest build · v6</small></div>
+    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
+  </div>
+
+  <div class="opps" id="opps"></div>
+
+  <div class="pot-h"><b>Community Pot</b><span class="line"></span><span id="potcount" style="font-size:11px;color:var(--muted)"></span></div>
+  <div class="pot" id="pot"></div>
+
+  <div class="hintbar" id="hintbar">
+    <span class="ic">💡</span>
+    <span class="txt" id="hinttext">Tap a card to send it to the pot, or drag it where you want. Tap the Stock to flip.</span>
+    <button class="hintbtn" id="hintbtn">Hint</button>
+  </div>
+
+  <div class="you-h">
+    <div class="who"><span class="dot" style="color:var(--p0)"></span>You <span class="combo" id="combo">COMBO</span></div>
+    <div class="you-net">net <b id="younet">0</b> &nbsp;·&nbsp; reserve <b id="youres" style="font-size:13px">13</b></div>
+  </div>
+
+  <div class="tray">
+    <div class="slot"><div class="lab">Reserve</div><div id="reserve"></div></div>
+    <div class="slot"><div class="lab">Stock</div><div id="stock"></div></div>
+    <div class="slot"><div class="lab">Waste</div><div id="waste"></div></div>
+  </div>
+  <div class="works" id="works"></div>
+
+  <div class="row" style="margin-top:16px"><button class="btn alt" id="restart">New match</button></div>
+</div>
+
+<div id="fx"></div>
+<div class="cascade" id="cascade"></div>
+<div class="toast" id="toast"></div>
+
+<div class="coach" id="coach">
+  <div class="step" id="coachstep">Step 1 of 6</div>
+  <div class="msg" id="coachmsg"></div>
+  <div class="acts" id="coachacts"></div>
+</div>
+
+<div class="ov" id="startov">
+  <div class="panel">
+    <h1>Stackdown</h1>
+    <div class="tag">Everyone plays solitaire at once. All aces go to one shared pot in the middle. Race to drop the most cards before the buzzer.</div>
+    <div class="opt"><div class="lab">Match length</div>
+      <div class="seg" id="segLen"><button data-v="120">2:00</button><button data-v="180" class="on">3:00</button><button data-v="300">5:00</button></div></div>
+    <div class="opt"><div class="lab">Bot pressure</div>
+      <div class="seg" id="segDiff"><button data-v="1.7" class="on">Relaxed</button><button data-v="1.2">Even</button><button data-v="0.85">Pushy</button></div></div>
+    <div class="row" style="margin-top:18px;flex-direction:column"><button class="btn" id="tutbtn" style="width:100%">Learn to play · 30 sec</button>
+      <button class="btn alt" id="startbtn" style="width:100%">Skip to a match</button></div>
+  </div>
+</div>
+
+<div class="ov" id="rulesov" style="display:none">
+  <div class="panel">
+    <h1 style="font-size:24px">How to play</h1>
+    <div class="legend">
+      <b>Two ways to play a card:</b> <b>tap</b> it to send it straight to the pot (when it fits there), or <b>drag</b> it to place it exactly where you want — the pot or a work pile. While you drag, valid spots light up:<br>
+      <div class="k"><span class="swatch" style="background:var(--gold)"></span> Pot glows gold</div> — drop it there to score (+1).<br>
+      <div class="k"><span class="swatch" style="background:var(--good)"></span> A pile glows green</div> — drop it there to stack.<br><br>
+      <b>The pot</b> builds up by suit: A → 2 → 3 … → K. Anyone can play to any pile, and several piles of the same suit can be open at once — race for the slot.<br>
+      <b>Your work piles</b> build down in alternating colours (red 7 on black 8) to free buried cards.<br>
+      <b>Stock</b>: tap the deck to flip a fresh card.<br>
+      <b>Reserve</b> (the badge): empty it for <b>+10</b>; every card left at the buzzer is <b>−2</b>. Your score already includes that.
+    </div>
+    <div class="row" style="margin-top:16px"><button class="btn" id="rulesclose" style="width:100%">Got it</button></div>
+  </div>
+</div>
+
+<div class="ov" id="endov" style="display:none">
+  <div class="panel">
+    <h1 id="endtitle">Time!</h1>
+    <div class="tag" id="endsub"></div>
+    <div class="podium" id="podium"></div>
+    <div class="row"><button class="btn" id="again" style="flex:1">Play again</button><button class="btn alt" id="fbresults" style="flex:1">Feedback</button></div>
+  </div>
+</div>
+
+<div class="ov" id="fbov" style="display:none">
+  <div class="panel">
+    <h1 style="font-size:24px">Quick feedback</h1>
+    <div class="tag">Three taps and an optional note — thanks for playtesting Stackdown!</div>
+    <div class="opt"><div class="lab">Was it fun?</div><div class="seg fbseg" data-k="fun"><button data-v="meh">Meh</button><button data-v="ok">OK</button><button data-v="fun">Fun</button><button data-v="loved">Loved it</button></div></div>
+    <div class="opt"><div class="lab">The pace felt…</div><div class="seg fbseg" data-k="pace"><button data-v="slow">Too slow</button><button data-v="right">Just right</button><button data-v="fast">Too fast</button></div></div>
+    <div class="opt"><div class="lab">Was it clear how to play?</div><div class="seg fbseg" data-k="clear"><button data-v="no">Confusing</button><button data-v="some">Mostly</button><button data-v="yes">Totally</button></div></div>
+    <div class="opt"><div class="lab">Anything else? (optional)</div><textarea id="fbnote" rows="3" style="width:100%;background:#0e1022;border:1px solid #2c2f52;border-radius:8px;color:var(--ink);padding:8px;font:inherit;resize:vertical"></textarea></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="fbsend" style="flex:1">Send feedback</button><button class="btn alt" id="fbclose">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===== PLAYTEST CONFIG (edit this one line) =====
+  // "mailto:you@example.com"  → Send opens a pre-filled email to you.
+  // a Google Form / Typeform URL → Send opens it (answers also copied to clipboard).
+  // ""  → Send copies the feedback to the tester's clipboard to paste back.
+  const FEEDBACK_URL = "mailto:jakeschirm@gmail.com";
+
+  let matchesPlayed=0, wins=0;
+  const SUITS=["H","D","C","S"], REDS={H:1,D:1};
+  const PCOLORS=["--p0","--p1","--p2","--p3"];
+  const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
+  const STREAK_WINDOW=5000;
+  let MATCH_SECS=180, BOT_FACTOR=1.7, NPLAYERS=4, tutorial=false, tutStep=0, teachStep=-1;
+
+  let players=[], foundations=[], timeLeft=0, timerId=null, running=false;
+  let hintMsg=null, hintKind="", hintUntil=0, firstRealCoachShown=false;
+  let humanTimes=[], dragLock=false, prevReserveId=null, prevWasteId=null;
+
+  const $=id=>document.getElementById(id);
+  const last=a=>a[a.length-1];
+  const isRed=c=>!!REDS[c.suit];
+  const rankTxt=r=>({1:"A",11:"J",12:"Q",13:"K"})[r]||(""+r);
+  const suitSym=s=>({H:"♥",D:"♦",C:"♣",S:"♠"})[s];
+
+  function makeDeck(owner){const d=[];for(const s of SUITS)for(let r=1;r<=13;r++)d.push({suit:s,rank:r,owner,id:s+r+"_"+owner});
+    for(let i=d.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[d[i],d[j]]=[d[j],d[i]];}return d;}
+  function newPlayer(i){const deck=makeDeck(i);return{index:i,name:NAMES[i],color:PCOLORS[i],isBot:i!==0,
+    reserve:deck.slice(0,13),work:[[deck[13]],[deck[14]],[deck[15]],[deck[16]]],stock:deck.slice(17),waste:[],
+    score:0,potCards:0,cleared:false,cleanAwarded:false,potTimes:[],_t:null};}
+  function setup(){players=[];for(let i=0;i<NPLAYERS;i++)players.push(newPlayer(i));foundations=[];timeLeft=MATCH_SECS;running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;}
+  function setupTutorial(){NPLAYERS=1;players=[newPlayer(0)];foundations=[];running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;
+    const p=players[0];const pool=[...p.reserve,...p.work.flat(),...p.stock];const aces=[],rest=[];
+    pool.forEach(c=>(c.rank===1?aces:rest).push(c));
+    p.work=[[aces[0]],[aces[1]],[aces[2]],[rest.pop()]];p.reserve=rest.splice(0,12);p.reserve.push(aces[3]);p.stock=rest;p.waste=[];}
+
+  // rules
+  function colorDiff(a,b){return isRed(a)!==isRed(b);}
+  function canStackWork(mb,dest){if(dest.length===0)return true;const t=last(dest);return t.rank===mb.rank+1&&colorDiff(t,mb);}
+  function runFrom(pile,idx){for(let k=idx;k<pile.length-1;k++){if(!(pile[k].rank===pile[k+1].rank+1&&colorDiff(pile[k],pile[k+1])))return null;}return pile.slice(idx);}
+  function foundationFor(card){if(card.rank===1)return{kind:"new"};for(let i=0;i<foundations.length;i++){const f=foundations[i];if(f.suit===card.suit&&f.cards.length===card.rank-1)return{kind:"play",fi:i};}return null;}
+  function movingUnit(p,src){if(src.type==="reserve")return p.reserve.length?[last(p.reserve)]:null;if(src.type==="waste")return p.waste.length?[last(p.waste)]:null;if(src.type==="work")return runFrom(p.work[src.pi],src.start);return null;}
+  function anyPotMove(p){if(p.reserve.length&&foundationFor(last(p.reserve)))return true;if(p.waste.length&&foundationFor(last(p.waste)))return true;for(let i=0;i<4;i++){const pl=p.work[i];if(pl.length&&foundationFor(last(pl)))return true;}return false;}
+
+  // scoring
+  function award(p,card){p.score+=1;p.potCards+=1;const now=performance.now();p.potTimes.push(now);p.potTimes=p.potTimes.filter(t=>now-t<=STREAK_WINDOW);
+    let txt="+1",cls=p.color,big=false;if(p.potTimes.length>=3){p.score+=1;txt="+2";}if(card.rank===13){p.score+=5;txt="+5 CROWN";big=true;cls="--gold";}
+    pop(txt,null,cls,big);if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");}}
+  function checkClear(p){if(!p.cleared&&p.reserve.length===0){p.cleared=true;if(!p.cleanAwarded){p.cleanAwarded=true;p.score+=10;pop("+10 CLEAR!",null,p.color,true);if(p.isBot)flashOpp(p.index);}}}
+  const net=p=>p.score-2*p.reserve.length;
+
+  // moves
+  function playToFoundation(p,src){let card;if(src.type==="reserve")card=last(p.reserve);else if(src.type==="waste")card=last(p.waste);else card=last(p.work[src.pi]);
+    if(!card)return false;const m=foundationFor(card);if(!m)return false;
+    if(src.type==="reserve")p.reserve.pop();else if(src.type==="waste")p.waste.pop();else p.work[src.pi].pop();
+    let fi;if(m.kind==="new"){foundations.push({suit:card.suit,cards:[card]});fi=foundations.length-1;}else{foundations[m.fi].cards.push(card);fi=m.fi;}
+    award(p,card);checkClear(p);render();const el=document.querySelector('.fnd[data-fi="'+fi+'"]');if(el){el.classList.remove("hit");void el.offsetWidth;el.classList.add("hit");}return true;}
+  function moveToWork(p,src,destPi){const dest=p.work[destPi];let run;
+    if(src.type==="reserve")run=p.reserve.length?[last(p.reserve)]:null;else if(src.type==="waste")run=p.waste.length?[last(p.waste)]:null;else run=runFrom(p.work[src.pi],src.start);
+    if(!run||!run.length)return false;if(src.type==="work"&&src.pi===destPi)return false;if(!canStackWork(run[0],dest))return false;
+    if(src.type==="reserve")p.reserve.pop();else if(src.type==="waste")p.waste.pop();else p.work[src.pi].splice(src.start);
+    for(const c of run)dest.push(c);checkClear(p);render();return true;}
+  function draw(p){if(p.stock.length===0){if(p.waste.length===0)return false;p.stock=p.waste.reverse();p.waste=[];}p.waste.push(p.stock.pop());render();return true;}
+
+  // ---- human tempo (bots learn from this) ----
+  function noteHuman(){humanTimes.push(Date.now());if(humanTimes.length>8)humanTimes.shift();}
+  function humanTempo(){if(humanTimes.length<2)return 2400;const iv=[];for(let i=1;i<humanTimes.length;i++)iv.push(humanTimes[i]-humanTimes[i-1]);iv.sort((a,b)=>a-b);const med=iv[Math.floor(iv.length/2)];return Math.min(4000,Math.max(700,med));}
+  function botDelay(){return humanTempo()*BOT_FACTOR*(0.8+Math.random()*0.5);}
+
+  // ---- DRAG ----
+  let drag=null;
+  function beginDrag(src,el,x,y){
+    const p=players[0];const run=movingUnit(p,src);if(!run||!run.length)return;
+    dragLock=true;
+    const r=el.getBoundingClientRect();const w=r.width,h=r.height;
+    const offX=x-r.left, offY=y-r.top; // keep the grabbed point under the finger
+    const layer=document.createElement("div");layer.className="draglayer";
+    run.forEach((c,i)=>{const ce=faceCard(c);ce.style.width=w+"px";ce.style.height=h+"px";ce.style.top=(i*h*0.34)+"px";layer.appendChild(ce);});
+    document.body.appendChild(layer);
+    const targets=[];
+    if(run.length===1&&foundationFor(run[0])){const potEl=$("pot");potEl.classList.add("drop-ok");targets.push({el:potEl,kind:"pot"});}
+    document.querySelectorAll(".work").forEach((wEl,pi)=>{if(!(src.type==="work"&&src.pi===pi)&&canStackWork(run[0],p.work[pi])){wEl.classList.add("drop-ok");targets.push({el:wEl,kind:"work",pi});}});
+    el.classList.add("lifted");
+    drag={src,run,layer,targets,w,h,offX,offY,moved:false,sx:x,sy:y,originEl:el};
+    moveGhost(x,y);updateHot(x,y);
+  }
+  function moveGhost(x,y){if(!drag)return;drag.layer.style.left=(x-drag.offX)+"px";drag.layer.style.top=(y-drag.offY)+"px";}
+  // forgiving: expand each target by a margin, and if several match pick the nearest centre
+  function pickTarget(x,y){if(!drag)return null;let best=null,bestD=Infinity;const M=30;
+    for(const t of drag.targets){const r=t.el.getBoundingClientRect();
+      if(x<r.left-M||x>r.right+M||y<r.top-M||y>r.bottom+M)continue;
+      const cx=(r.left+r.right)/2,cy=(r.top+r.bottom)/2;const d=(x-cx)*(x-cx)+(y-cy)*(y-cy);
+      if(d<bestD){bestD=d;best=t;}}
+    return best;}
+  function updateHot(x,y){if(!drag)return;const t=pickTarget(x,y);drag.targets.forEach(o=>o.el.classList.toggle("drop-hot",o===t));}
+  function onPointerMove(e){if(!drag)return;if(Math.abs(e.clientX-drag.sx)>5||Math.abs(e.clientY-drag.sy)>5)drag.moved=true;moveGhost(e.clientX,e.clientY);updateHot(e.clientX,e.clientY);}
+  function onPointerUp(e){if(!drag)return;const x=e.clientX,y=e.clientY;const d=drag;
+    const hit=pickTarget(x,y);
+    d.layer.remove();d.targets.forEach(t=>{t.el.classList.remove("drop-ok");t.el.classList.remove("drop-hot");});if(d.originEl)d.originEl.classList.remove("lifted");
+    drag=null;dragLock=false;
+    const p=players[0];
+    if(hit){if(hit.kind==="pot"){if(playToFoundation(p,d.src)){noteHuman();tutEvent("pot");}}
+      else{if(moveToWork(p,d.src,hit.pi)){noteHuman();tutEvent("work");}}return;}
+    if(!d.moved){ // TAP = score only: send to the pot if it fits, otherwise do nothing automatic
+      if(d.run.length===1&&foundationFor(d.run[0])){if(playToFoundation(p,d.src)){noteHuman();tutEvent("pot");}return;}
+      hint("Tap sends a card to the pot. To move it on your board, drag it where you want.","");render();return;}
+    const mb=d.run[0];const opp=isRed(mb)?"black":"red";
+    hint(`No spot there. ${rankTxt(mb.rank)}${suitSym(mb.suit)} needs a ${mb.rank===13?"empty pile":opp+" "+rankTxt(mb.rank+1)} to stack, or its slot in the pot.`,"warn");
+    render();}
+
+  function attachDrag(el,src){el.classList.add("grab");el.addEventListener("pointerdown",e=>{if(e.button!==undefined&&e.button>0)return;e.preventDefault();beginDrag(src,el,e.clientX,e.clientY);});}
+
+  // bots
+  function botAct(p){if(!running)return;const srcs=[{type:"reserve"}];for(let i=0;i<4;i++)if(p.work[i].length)srcs.push({type:"work",pi:i,start:p.work[i].length-1});if(p.waste.length)srcs.push({type:"waste"});
+    for(const s of srcs){let card=s.type==="reserve"?last(p.reserve):s.type==="waste"?last(p.waste):last(p.work[s.pi]);if(card&&foundationFor(card)){if(playToFoundation(p,s)){flashOpp(p.index);return;}}}
+    if(p.reserve.length)for(let i=0;i<4;i++){if(moveToWork(p,{type:"reserve"},i))return;}
+    if(p.waste.length)for(let i=0;i<4;i++){if(moveToWork(p,{type:"waste"},i))return;}
+    for(let a=0;a<4;a++){const run=p.work[a].length?runFrom(p.work[a],0):null;if(!run)continue;for(let b=0;b<4;b++){if(a!==b&&p.work[b].length&&canStackWork(run[0],p.work[b])){if(moveToWork(p,{type:"work",pi:a,start:0},b))return;}}}
+    draw(p);}
+  function scheduleBot(i){const p=players[i];p._t=setTimeout(function run(){if(!running)return;if(!dragLock)botAct(p);if(running)p._t=setTimeout(run,botDelay());},botDelay()+i*300);}
+  function startBots(){for(let i=1;i<NPLAYERS;i++)scheduleBot(i);}
+  function stopBots(){players.forEach(p=>{if(p._t){clearTimeout(p._t);p._t=null;}});}
+
+  // render
+  function faceCard(card){const d=document.createElement("div");d.className="card "+(isRed(card)?"red":"black");d.innerHTML=`<span class="crn">${rankTxt(card.rank)}${suitSym(card.suit)}</span><span class="pip">${suitSym(card.suit)}</span>`;return d;}
+  function placeholder(t){const d=document.createElement("div");d.className="ph";d.textContent=t||"";return d;}
+
+  function render(){
+    const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");
+    if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";}else{tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
+
+    const opps=$("opps");opps.className="opps"+(NPLAYERS<=1?" solo":"");opps.innerHTML="";
+    for(let i=1;i<NPLAYERS;i++){const p=players[i];const el=document.createElement("div");el.className="opp";el.dataset.pi=i;
+      el.innerHTML=`<div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}</div><div class="net" style="color:var(${p.color})">${net(p)}</div><div class="sub">reserve ${p.reserve.length}${p.cleared?" · CLEAR":""} · pot ${p.potCards}</div>`;opps.appendChild(el);}
+
+    const pot=$("pot");pot.innerHTML="";
+    if(foundations.length===0){const e=document.createElement("div");e.className="empty";e.innerHTML="The pot is empty.<br>Drag an <b>Ace</b> here to open the first pile.";pot.appendChild(e);}
+    else foundations.forEach((f,fi)=>{const w=document.createElement("div");w.className="fnd";w.dataset.fi=fi;const top=last(f.cards);if(top.rank===13){const cr=document.createElement("div");cr.className="crown";cr.textContent="👑";w.appendChild(cr);}w.appendChild(faceCard(top));const cnt=document.createElement("div");cnt.className="count";cnt.textContent=f.cards.length;w.appendChild(cnt);pot.appendChild(w);});
+    $("potcount").textContent=foundations.length?foundations.length+" piles open":"";
+
+    const you=players[0];$("younet").textContent=net(you);$("youres").textContent=you.reserve.length;
+
+    const rEl=$("reserve");rEl.innerHTML="";
+    if(you.reserve.length){const w=document.createElement("div");w.style.position="relative";const top=last(you.reserve);const c=faceCard(top);attachDrag(c,{type:"reserve"});if(teachStep===1&&foundationFor(top))c.classList.add("teach");if(prevReserveId&&prevReserveId!==top.id)c.classList.add("enter");prevReserveId=top.id;w.appendChild(c);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.reserve.length;w.appendChild(cnt);rEl.appendChild(w);}
+    else{prevReserveId=null;const ph=placeholder("✓");ph.style.color="var(--p0)";ph.style.borderColor="var(--p0)";rEl.appendChild(ph);}
+
+    const sEl=$("stock");sEl.innerHTML="";const sw=document.createElement("div");sw.style.position="relative";
+    if(you.stock.length){const b=document.createElement("div");b.className="card back stock";b.style.setProperty("--bc","var(--p0)");b.addEventListener("click",onStockClick);sw.appendChild(b);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.stock.length;sw.appendChild(cnt);}
+    else{const ph=placeholder("↻");ph.classList.add("stock");ph.addEventListener("click",onStockClick);sw.appendChild(ph);}
+    if(teachStep===3)sw.firstChild.classList.add("teach");sEl.appendChild(sw);
+
+    const wEl=$("waste");wEl.innerHTML="";
+    if(you.waste.length){const top=last(you.waste);const c=faceCard(top);attachDrag(c,{type:"waste"});if(prevWasteId&&prevWasteId!==top.id)c.classList.add("enter");prevWasteId=top.id;wEl.appendChild(c);}else{prevWasteId=null;wEl.appendChild(placeholder(""));}
+
+    const wks=$("works");wks.innerHTML="";
+    for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];const OFF=22;
+      if(pile.length===0){const ph=placeholder("");ph.style.opacity=".4";col.appendChild(ph);}
+      pile.forEach((card,idx)=>{const c=faceCard(card);if(runFrom(pile,idx))attachDrag(c,{type:"work",pi,start:idx});c.style.top=(idx*OFF)+"px";col.appendChild(c);});
+      col.style.height=Math.max(120,(pile.length-1)*22+90)+"px";pw.appendChild(col);wks.appendChild(pw);}
+
+    updateHint();
+  }
+
+  // hint bar (neutral by default; specifics only on demand)
+  function hint(msg,kind){hintMsg=msg;hintKind=kind||"";hintUntil=Date.now()+2800;updateHint();}
+  function updateHint(){const bar=$("hintbar"),txt=$("hinttext"),ic=bar.querySelector(".ic");let msg,kind="";
+    if(hintMsg&&Date.now()<hintUntil){msg=hintMsg;kind=hintKind;}
+    else{const p=players[0];msg=anyPotMove(p)?"Tap a card to send it to the pot, or drag to place it on your board.":"No pot play right now — tap the Stock to flip, or drag a card onto a pile to set up.";}
+    txt.textContent=msg;bar.className="hintbar"+(kind?(" "+kind):"");ic.textContent=kind==="warn"?"⚠️":"💡";}
+  function giveHint(){const p=players[0];
+    const tops=[{s:{type:"reserve"},c:p.reserve.length?last(p.reserve):null},{s:{type:"waste"},c:p.waste.length?last(p.waste):null}];
+    for(let i=0;i<4;i++)tops.push({s:{type:"work",pi:i,start:p.work[i].length-1},c:p.work[i].length?last(p.work[i]):null});
+    for(const t of tops){if(t.c&&foundationFor(t.c)){hint(`Try dragging the ${rankTxt(t.c.rank)}${suitSym(t.c.suit)} into the pot.`,"");return;}}
+    // a stacking move?
+    for(let a=0;a<4;a++){const pile=p.work[a];if(!pile.length)continue;const run=runFrom(pile,pile.length-1);if(!run)continue;for(let b=0;b<4;b++){if(a!==b&&canStackWork(run[0],p.work[b])){const t=last(p.work[b]);hint(`Move the ${rankTxt(run[0].rank)}${suitSym(run[0].suit)} onto the ${rankTxt(t.rank)}${suitSym(t.suit)} to free a card.`,"");return;}}}
+    if(p.reserve.length){const rc=last(p.reserve);for(let b=0;b<4;b++){if(canStackWork(rc,p.work[b])){hint(`Drop the ${rankTxt(rc.rank)}${suitSym(rc.suit)} from your reserve onto a pile to shrink your reserve.`,"");return;}}}
+    hint("Nothing obvious — tap the Stock to flip a new card.","");}
+
+  // fx
+  function pop(text,anchorEl,colorVar,big){const fx=$("fx");const d=document.createElement("div");d.className="pop"+(big?" big":"");d.textContent=text;d.style.color=`var(${colorVar})`;let x=innerWidth/2,y=innerHeight*0.42;const ref=anchorEl||$("pot");if(ref){const r=ref.getBoundingClientRect();x=r.left+r.width/2;y=r.top+r.height/2;}d.style.left=x+"px";d.style.top=y+"px";fx.appendChild(d);setTimeout(()=>d.remove(),1000);}
+  function flashOpp(i){const el=document.querySelector('.opp[data-pi="'+i+'"]');if(el){el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");}}
+  let toastT=null;function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),ms||1600);}
+
+  function onStockClick(){if(!draw(players[0]))hint("No cards left to flip.","warn");else{noteHuman();tutEvent("draw");}}
+
+  // tutorial
+  const TUT=[
+    {t:"Goal: drop more cards into the shared <b>pot</b> in the middle than your rivals do. You move cards by <b>dragging</b> them — let’s try it.",btn:"Show me"},
+    {t:"Grab the glowing <b>Ace</b> and drag it onto the pot in the middle to open a pile. (Drag with your finger or mouse.)",gate:"pot",spot:1},
+    {t:"That’s <b>+1</b>. The pot builds up by suit (A, 2, 3 …). Drag any other cards that fit, then continue.",btn:"Next"},
+    {t:"When nothing fits the pot, tap the <b>Stock</b> (the glowing deck) to flip a fresh card.",gate:"draw",spot:3},
+    {t:"You can also drag a card onto another to <b>stack down</b> in alternating colours — that frees buried cards. Try it, or skip ahead.",gate:"work",btn:"Next"},
+    {t:"Last thing: your <b>Reserve</b> (the badge count) is the real race. Empty it for <b>+10</b>; every card left at the buzzer costs <b>−2</b>. That’s everything!",btn:"Start a real match"}
+  ];
+  function startTutorial(){tutorial=true;tutStep=0;$("startov").style.display="none";$("endov").style.display="none";setupTutorial();clearInterval(timerId);showStep(0);}
+  function showStep(i){const s=TUT[i];teachStep=(s.spot!==undefined)?s.spot:-1;const c=$("coach");c.classList.add("on");
+    $("coachstep").textContent="Step "+(i+1)+" of "+TUT.length;$("coachmsg").innerHTML=s.t;
+    const acts=$("coachacts");acts.innerHTML="";
+    if(s.btn){const b=document.createElement("button");b.className="btn";b.textContent=s.btn;b.onclick=()=>{if(i===TUT.length-1)endTutorial();else{tutStep=i+1;showStep(tutStep);}};acts.appendChild(b);}
+    if(s.gate){const sk=document.createElement("button");sk.className="linkbtn";sk.textContent="Skip this step ›";sk.onclick=()=>{tutStep=i+1;if(tutStep<TUT.length)showStep(tutStep);else endTutorial();};acts.appendChild(sk);}
+    const bail=document.createElement("button");bail.className="linkbtn";bail.textContent="Skip tutorial";bail.style.marginLeft="auto";bail.onclick=endTutorial;acts.appendChild(bail);render();}
+  function tutEvent(type){if(!tutorial)return;const s=TUT[tutStep];if(s&&s.gate===type){tutStep++;if(tutStep<TUT.length)showStep(tutStep);else endTutorial();}}
+  function endTutorial(){tutorial=false;teachStep=-1;$("coach").classList.remove("on");startRealMatch();}
+
+  // lifecycle
+  function updateTimer(){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";return;}tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
+  function tick(){timeLeft--;if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag)updateTimer();else render();}
+  function startRealMatch(){tutorial=false;teachStep=-1;NPLAYERS=4;$("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
+    setup();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
+    if(!firstRealCoachShown){firstRealCoachShown=true;setTimeout(function(){toast("Rivals share this pot — grab a slot before they take it!",2600);},1100);}}
+  function startMatch(){startRealMatch();}
+  function endGame(){running=false;clearInterval(timerId);stopBots();
+    const ranked=players.map(p=>({p,final:net(p)})).sort((a,b)=>b.final-a.final||b.p.potCards-a.p.potCards);const win=ranked[0].p;
+    matchesPlayed++; if(win.index===0) wins++;
+    $("endtitle").textContent=win.index===0?"You win!":win.name+" wins";
+    $("endsub").textContent=win.index===0?"You stacked down the most. Net "+ranked[0].final+".":"Final standings — net is pot + bonuses − reserve penalty.";
+    const pod=$("podium");pod.innerHTML="";ranked.forEach((r,idx)=>{const p=r.p;const row=document.createElement("div");row.className="pr"+(idx===0?" win":"");
+      row.innerHTML=`<div class="rk">${idx+1}</div><div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}<span class="bd">pot ${p.potCards} · ${p.cleared?"cleared":"reserve "+p.reserve.length}</span></div><div class="sc" style="color:var(${p.color})">${r.final}</div>`;pod.appendChild(row);});
+    $("endov").style.display="flex";if(win.index===0)cascade();}
+  function cascade(){const layer=$("cascade");layer.innerHTML="";const cols=14;for(let i=0;i<70;i++){const c=document.createElement("div");c.className="cc";c.style.left=((i%cols)/(cols-1)*100)+"%";c.style.top="-60px";const dur=1.6+Math.random()*1.4,delay=Math.random()*1.2;c.style.transition=`transform ${dur}s cubic-bezier(.4,0,.7,1) ${delay}s`;layer.appendChild(c);requestAnimationFrame(()=>requestAnimationFrame(()=>{c.style.transform=`translateY(${innerHeight+120}px) rotate(${(Math.random()*2-1)*220}deg)`;}));}setTimeout(()=>layer.innerHTML="",4200);}
+
+  // chrome
+  function seg(id,cb){$(id).querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{$(id).querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cb(parseFloat(b.dataset.v));}));}
+  seg("segLen",v=>MATCH_SECS=v);seg("segDiff",v=>BOT_FACTOR=v);
+  $("tutbtn").addEventListener("click",startTutorial);
+  $("startbtn").addEventListener("click",startMatch);
+  $("again").addEventListener("click",()=>{$("startov").style.display="flex";$("endov").style.display="none";});
+  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?"))$("startov").style.display="flex";});
+  $("helpbtn").addEventListener("click",()=>{$("rulesov").style.display="flex";});
+  $("rulesclose").addEventListener("click",()=>{$("rulesov").style.display="none";});
+
+  // feedback
+  const fb={fun:null,pace:null,clear:null};
+  document.querySelectorAll(".fbseg").forEach(g=>g.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{g.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fb[g.dataset.k]=b.dataset.v;})));
+  function openFeedback(){$("endov").style.display="none";$("fbov").style.display="flex";}
+  function closeFeedback(){$("fbov").style.display="none";}
+  function copyText(t){try{if(navigator.clipboard)navigator.clipboard.writeText(t);}catch(e){}}
+  function sendFeedback(){
+    const note=($("fbnote").value||"").trim();
+    const summary="Stackdown playtest feedback\n"+
+      "Fun: "+(fb.fun||"-")+"\nPace: "+(fb.pace||"-")+"\nClarity: "+(fb.clear||"-")+
+      "\nMatches played: "+matchesPlayed+" (your wins: "+wins+")\nNotes: "+(note||"(none)");
+    if(FEEDBACK_URL.indexOf("mailto:")===0){
+      window.location.href=FEEDBACK_URL+(FEEDBACK_URL.indexOf("?")>=0?"&":"?")+"subject="+encodeURIComponent("Stackdown playtest")+"&body="+encodeURIComponent(summary);
+    } else if(FEEDBACK_URL){ copyText(summary); window.open(FEEDBACK_URL,"_blank"); toast("Opening the feedback form (answers copied too) — thank you!",2600); }
+    else { copyText(summary); toast("Feedback copied — paste it back to the developer. Thank you!",2800); }
+    closeFeedback();
+  }
+  $("fbbtn").addEventListener("click",openFeedback);
+  $("fbresults").addEventListener("click",openFeedback);
+  $("fbclose").addEventListener("click",closeFeedback);
+  $("fbsend").addEventListener("click",sendFeedback);
+  $("hintbtn").addEventListener("click",giveHint);
+  document.addEventListener("pointermove",onPointerMove,{passive:false});
+  document.addEventListener("pointerup",onPointerUp);
+  document.addEventListener("pointercancel",onPointerUp);
+
+  setup();render();running=false;
+})();
+</script>
