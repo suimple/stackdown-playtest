@@ -73,6 +73,11 @@
   .combo{font-weight:900;letter-spacing:1px;color:var(--gold);opacity:0;transition:opacity .2s;text-shadow:0 0 14px rgba(255,210,63,.8)}
   .combo.on{opacity:1}
   .you-net{font-size:13px;color:var(--muted)}.you-net b{color:var(--ink);font-size:18px}
+  .place{font-size:12px;font-weight:900;letter-spacing:.5px;padding:2px 9px;border-radius:999px;background:#0e1022;border:1px solid #2c2f52;color:var(--muted)}
+  .place.lead{color:#0e1022;background:var(--gold);border-color:var(--gold)}
+  .subt{font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px;text-align:center}
+  .subt.res{color:var(--good);font-weight:800}
+  .slot .lab b{color:var(--good)}
 
   .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
   .slot{display:flex;flex-direction:column;align-items:center;gap:4px}
@@ -143,7 +148,7 @@
   .cascade{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
   .cc{position:absolute;width:34px;height:48px;border-radius:5px;background:var(--card);border:1px solid var(--card-edge);will-change:transform}
 
-  .coach{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:48;width:min(680px,94vw);background:linear-gradient(180deg,#243056,#182142);border:1px solid #3f64b8;border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:none}
+  .coach{position:fixed;left:50%;bottom:14px;top:auto;transform:translateX(-50%);z-index:48;width:min(680px,94vw);max-height:46vh;overflow:auto;background:linear-gradient(180deg,#243056,#182142);border:1px solid #3f64b8;border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:none}
   .coach.on{display:block}
   .coach .step{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#8fb2ff;margin-bottom:3px}
   .coach .msg{font-size:14px;line-height:1.45}
@@ -163,6 +168,7 @@
     <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
   </div>
 
+  <div class="pot-h" id="oppsh"><b>Rivals · racing you</b><span class="line"></span></div>
   <div class="opps" id="opps"></div>
 
   <div class="pot-h"><b>Community Pot</b><span class="line"></span><span id="potcount" style="font-size:11px;color:var(--muted)"></span></div>
@@ -175,12 +181,12 @@
   </div>
 
   <div class="you-h">
-    <div class="who"><span class="dot" style="color:var(--p0)"></span>You <span class="combo" id="combo">COMBO</span></div>
+    <div class="who"><span class="dot" style="color:var(--p0)"></span>You <span class="place" id="place"></span> <span class="combo" id="combo">COMBO</span></div>
     <div class="you-net">net <b id="younet">0</b> &nbsp;·&nbsp; reserve <b id="youres" style="font-size:13px">13</b></div>
   </div>
 
   <div class="tray">
-    <div class="slot"><div class="lab">Reserve</div><div id="reserve"></div></div>
+    <div class="slot"><div class="lab"><b>Reserve</b></div><div id="reserve"></div><div class="subt res">empty to win</div></div>
     <div class="slot"><div class="lab">Stock</div><div id="stock"></div></div>
     <div class="slot"><div class="lab">Waste</div><div id="waste"></div></div>
   </div>
@@ -202,7 +208,7 @@
 <div class="ov" id="startov">
   <div class="panel">
     <h1>Stackdown</h1>
-    <div class="tag">Everyone plays solitaire at once. All aces go to one shared pot in the middle. Race to drop the most cards before the buzzer.</div>
+    <div class="tag">You vs. 3 bot rivals — everyone plays solitaire at the same time. All aces go to one shared pot in the middle. Empty your Reserve and drop the most cards before the buzzer.</div>
     <div class="opt"><div class="lab">Match length</div>
       <div class="seg" id="segLen"><button data-v="120">2:00</button><button data-v="180" class="on">3:00</button><button data-v="300">5:00</button></div></div>
     <div class="opt"><div class="lab">Bot pressure</div>
@@ -216,11 +222,11 @@
   <div class="panel">
     <h1 style="font-size:24px">How to play</h1>
     <div class="legend">
-      <b>Two ways to play a card:</b> <b>tap</b> it to send it straight to the pot (when it fits there), or <b>drag</b> it to place it exactly where you want — the pot or a work pile. While you drag, valid spots light up:<br>
+      <b>Two ways to play a card:</b> <b>tap</b> it to auto-play it — to the pot if it fits, otherwise onto a work pile. If a card fits more than one spot, those spots light up so you can <b>drag</b> it exactly where you want. While you drag, valid spots also light up:<br>
       <div class="k"><span class="swatch" style="background:var(--gold)"></span> Pot glows gold</div> — drop it there to score (+1).<br>
       <div class="k"><span class="swatch" style="background:var(--good)"></span> A pile glows green</div> — drop it there to stack.<br><br>
       <b>The pot</b> builds up by suit: A → 2 → 3 … → K. Anyone can play to any pile, and several piles of the same suit can be open at once — race for the slot.<br>
-      <b>Your work piles</b> build down in alternating colours (red 7 on black 8) to free buried cards.<br>
+      <b>Your work piles</b> build down in alternating colours (red 7 on black 8) to free buried cards. An <b>empty pile is wild</b> — you can move any card onto it.<br>
       <b>Stock</b>: tap the deck to flip a fresh card.<br>
       <b>Reserve</b> (the badge): empty it for <b>+10</b>; every card left at the buzzer is <b>−2</b>. Your score already includes that.
     </div>
@@ -324,7 +330,7 @@
   let drag=null;
   function beginDrag(src,el,x,y){
     const p=players[0];const run=movingUnit(p,src);if(!run||!run.length)return;
-    dragLock=true;
+    dragLock=true;clearHighlights();
     const r=el.getBoundingClientRect();const w=r.width,h=r.height;
     const offX=x-r.left, offY=y-r.top; // keep the grabbed point under the finger
     const layer=document.createElement("div");layer.className="draglayer";
@@ -354,14 +360,38 @@
     const p=players[0];
     if(hit){if(hit.kind==="pot"){if(playToFoundation(p,d.src)){noteHuman();tutEvent("pot");}}
       else{if(moveToWork(p,d.src,hit.pi)){noteHuman();tutEvent("work");}}return;}
-    if(!d.moved){ // TAP = score only: send to the pot if it fits, otherwise do nothing automatic
-      if(d.run.length===1&&foundationFor(d.run[0])){if(playToFoundation(p,d.src)){noteHuman();tutEvent("pot");}return;}
-      hint("Tap sends a card to the pot. To move it on your board, drag it where you want.","");render();return;}
+    if(!d.moved){ handleTap(d.src); return; }
     const mb=d.run[0];const opp=isRed(mb)?"black":"red";
     hint(`No spot there. ${rankTxt(mb.rank)}${suitSym(mb.suit)} needs a ${mb.rank===13?"empty pile":opp+" "+rankTxt(mb.rank+1)} to stack, or its slot in the pot.`,"warn");
     render();}
 
   function attachDrag(el,src){el.classList.add("grab");el.addEventListener("pointerdown",e=>{if(e.button!==undefined&&e.button>0)return;e.preventDefault();beginDrag(src,el,e.clientX,e.clientY);});}
+
+  // ---- tap-to-play + target highlighting ----
+  // Tap a card: if it fits exactly one good spot (the pot, or a real stack) play it there.
+  // If it fits several, light them up and let the player drag to choose.
+  let tapHints=[], tapHintsUntil=0, hlTimer=null;
+  function applyTapHints(){const on=Date.now()<tapHintsUntil&&tapHints.length;const pot=$("pot");
+    if(pot)pot.classList.toggle("drop-ok",!!(on&&tapHints.some(d=>d.kind==="pot")));
+    document.querySelectorAll(".work").forEach((w,pi)=>w.classList.toggle("drop-ok",!!(on&&tapHints.some(d=>d.kind==="work"&&d.pi===pi))));}
+  function highlightDrops(drops){tapHints=drops.slice();tapHintsUntil=Date.now()+1900;if(hlTimer)clearTimeout(hlTimer);hlTimer=setTimeout(function(){tapHints=[];render();},1950);render();}
+  function clearHighlights(){tapHints=[];tapHintsUntil=0;if(hlTimer){clearTimeout(hlTimer);hlTimer=null;}}
+  function tapTargets(src){const p=players[0];const run=movingUnit(p,src);if(!run||!run.length)return null;
+    const pot=(run.length===1&&!!foundationFor(run[0]));const stacks=[],empties=[];
+    for(let pi=0;pi<4;pi++){if(src.type==="work"&&src.pi===pi)continue;const dest=p.work[pi];
+      if(dest.length===0)empties.push(pi);else if(canStackWork(run[0],dest))stacks.push(pi);}
+    return {run,pot,stacks,empties};}
+  function handleTap(src){clearHighlights();const p=players[0];const t=tapTargets(src);if(!t){render();return;}
+    const meaningful=(t.pot?1:0)+t.stacks.length;
+    if(meaningful===1){if(t.pot){if(playToFoundation(p,src)){noteHuman();tutEvent("pot");}}
+      else if(moveToWork(p,src,t.stacks[0])){noteHuman();tutEvent("work");}return;}
+    if(meaningful===0){
+      if(t.empties.length){highlightDrops(t.empties.map(pi=>({kind:"work",pi})));hint("An empty pile takes any card — drag this onto a glowing pile.","");}
+      else{const mb=t.run[0];const opp=isRed(mb)?"black":"red";
+        hint(`No spot for ${rankTxt(mb.rank)}${suitSym(mb.suit)} yet — it needs ${mb.rank===13?"an empty pile":"a "+opp+" "+rankTxt(mb.rank+1)}, or its slot in the pot.`,"warn");render();}
+      return;}
+    const drops=[];if(t.pot)drops.push({kind:"pot"});t.stacks.forEach(pi=>drops.push({kind:"work",pi}));t.empties.forEach(pi=>drops.push({kind:"work",pi}));
+    highlightDrops(drops);hint("This card fits more than one spot — drag it where you want.","");}
 
   // bots
   function botAct(p){if(!running)return;const srcs=[{type:"reserve"}];for(let i=0;i<4;i++)if(p.work[i].length)srcs.push({type:"work",pi:i,start:p.work[i].length-1});if(p.waste.length)srcs.push({type:"waste"});
@@ -382,6 +412,7 @@
     const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");
     if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";}else{tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
 
+    const oh=$("oppsh");if(oh)oh.style.display=(NPLAYERS<=1)?"none":"";
     const opps=$("opps");opps.className="opps"+(NPLAYERS<=1?" solo":"");opps.innerHTML="";
     for(let i=1;i<NPLAYERS;i++){const p=players[i];const el=document.createElement("div");el.className="opp";el.dataset.pi=i;
       el.innerHTML=`<div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}</div><div class="net" style="color:var(${p.color})">${net(p)}</div><div class="sub">reserve ${p.reserve.length}${p.cleared?" · CLEAR":""} · pot ${p.potCards}</div>`;opps.appendChild(el);}
@@ -392,6 +423,10 @@
     $("potcount").textContent=foundations.length?foundations.length+" piles open":"";
 
     const you=players[0];$("younet").textContent=net(you);$("youres").textContent=you.reserve.length;
+    const pl=$("place");
+    if(pl){if(NPLAYERS<=1){pl.style.display="none";}else{pl.style.display="";const yn=net(you);let better=0;
+      for(const q of players){if(q===you)continue;const qn=net(q);if(qn>yn||(qn===yn&&q.potCards>you.potCards))better++;}
+      const rank=better+1;pl.textContent=(["","1st","2nd","3rd","4th"][rank]||rank+"th")+" of "+NPLAYERS;pl.classList.toggle("lead",rank===1);}}
 
     const rEl=$("reserve");rEl.innerHTML="";
     if(you.reserve.length){const w=document.createElement("div");w.style.position="relative";const top=last(you.reserve);const c=faceCard(top);attachDrag(c,{type:"reserve"});if(teachStep===1&&foundationFor(top))c.classList.add("teach");if(prevReserveId&&prevReserveId!==top.id)c.classList.add("enter");prevReserveId=top.id;w.appendChild(c);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.reserve.length;w.appendChild(cnt);rEl.appendChild(w);}
@@ -411,6 +446,7 @@
       pile.forEach((card,idx)=>{const c=faceCard(card);if(runFrom(pile,idx))attachDrag(c,{type:"work",pi,start:idx});c.style.top=(idx*OFF)+"px";col.appendChild(c);});
       col.style.height=Math.max(120,(pile.length-1)*22+90)+"px";pw.appendChild(col);wks.appendChild(pw);}
 
+    applyTapHints();
     updateHint();
   }
 
@@ -457,7 +493,10 @@
 
   // lifecycle
   function updateTimer(){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";return;}tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
-  function tick(){timeLeft--;if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag)updateTimer();else render();}
+  function tick(){timeLeft--;
+    if(timeLeft===60)toast("⏱ One minute left — empty that Reserve!",2200);
+    else if(timeLeft===10)toast("⏱ Final 10 seconds!",1800);
+    if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag)updateTimer();else render();}
   function startRealMatch(){tutorial=false;teachStep=-1;NPLAYERS=4;$("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
     setup();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
     if(!firstRealCoachShown){firstRealCoachShown=true;setTimeout(function(){toast("Rivals share this pot — grab a slot before they take it!",2600);},1100);}}

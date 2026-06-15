@@ -10,8 +10,9 @@ It's one self-contained file, `index.html` — no build step, no dependencies. O
 
 ## How to play
 
-- **Tap** a card to send it to the pot (when it fits there).
+- **Tap** a card to auto-play it — to the pot if it fits, otherwise onto a work pile. If it fits more than one spot, those spots light up so you can **drag** it where you want.
 - **Drag** a card to place it exactly where you want — the pot or a work pile. Valid spots light up while you drag.
+- An **empty pile is wild** — you can move any card onto it.
 - **Tap the Stock** to flip a fresh card.
 - Build your **work piles** down in alternating colours (red 7 on black 8) to free buried cards.
 - Empty your **Reserve** pile for +10; every card left at the buzzer is −2.
