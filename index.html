@@ -56,8 +56,9 @@
   .pot-h{display:flex;align-items:center;gap:8px;margin:6px 2px}
   .pot-h b{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
   .pot-h .line{flex:1;height:1px;background:linear-gradient(90deg,#2c2f52,transparent)}
-  .pot{min-height:96px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px;border-radius:14px;
-    background:repeating-linear-gradient(45deg,#1a1f3d 0 12px,#191d39 12px 24px);border:1px solid #2c2f52;touch-action:none;transition:box-shadow .12s,outline-color .12s}
+  .pot{min-height:96px;display:flex;flex-wrap:nowrap;gap:8px;justify-content:flex-start;align-items:center;padding:12px;border-radius:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
+    background:repeating-linear-gradient(45deg,#1a1f3d 0 12px,#191d39 12px 24px);border:1px solid #2c2f52;touch-action:pan-x;transition:box-shadow .12s,outline-color .12s}
+  .pot .empty{margin:auto}
   .pot.drop-ok{outline:3px dashed var(--gold);outline-offset:3px;box-shadow:inset 0 0 30px rgba(255,210,63,.25)}
   .pot.drop-hot{outline:3px solid var(--gold);outline-offset:3px;box-shadow:inset 0 0 46px rgba(255,210,63,.55)}
   .pot .empty{color:var(--muted);font-size:13px;align-self:center;padding:18px 8px;text-align:center}
@@ -113,7 +114,7 @@
   .ph{width:var(--cw);height:var(--ch);--cw:clamp(40px,12.5vw,58px);--ch:calc(var(--cw)*1.42);border-radius:7px;border:1.5px dashed #3a3f6b;display:flex;align-items:center;justify-content:center;color:#3a3f6b;font-size:20px}
   .count{position:absolute;bottom:-7px;right:-7px;background:#0e1022;border:1px solid #2c2f52;color:var(--ink);font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px}
   .stock{cursor:pointer}
-  .fnd{position:relative}
+  .fnd{position:relative;flex:0 0 auto}
   .fnd .crown{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:13px;filter:drop-shadow(0 0 6px var(--gold))}
   .fnd.hit{animation:hit .35s}
   @keyframes hit{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
@@ -447,10 +448,17 @@
     if(you.waste.length){const top=last(you.waste);const c=faceCard(top);attachDrag(c,{type:"waste"});if(prevWasteId&&prevWasteId!==top.id)c.classList.add("enter");prevWasteId=top.id;wEl.appendChild(c);}else{prevWasteId=null;wEl.appendChild(placeholder(""));}
 
     const wks=$("works");wks.innerHTML="";
-    for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];const OFF=22;
+    // Fan offset adapts to the space left below the tray so the tallest pile's
+    // bottom card stays on screen — squished (min 15px, keeps rank corners legible)
+    // when stacks get long, full 22px otherwise.
+    const maxLen=Math.max(1,you.work[0].length,you.work[1].length,you.work[2].length,you.work[3].length);
+    const cwPx=Math.max(46,Math.min(60,0.135*innerWidth)),cardH=cwPx*1.42;
+    const avail=Math.max(150,innerHeight-wks.getBoundingClientRect().top-16);
+    let OFF=22;if(maxLen>1)OFF=Math.max(15,Math.min(22,(avail-cardH)/(maxLen-1)));
+    for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];
       if(pile.length===0){const ph=placeholder("");ph.style.opacity=".4";col.appendChild(ph);}
       pile.forEach((card,idx)=>{const c=faceCard(card);if(runFrom(pile,idx))attachDrag(c,{type:"work",pi,start:idx});c.style.top=(idx*OFF)+"px";col.appendChild(c);});
-      col.style.height=Math.max(120,(pile.length-1)*22+90)+"px";pw.appendChild(col);wks.appendChild(pw);}
+      col.style.height=Math.max(120,(pile.length-1)*OFF+cardH+8)+"px";pw.appendChild(col);wks.appendChild(pw);}
 
     applyTapHints();
     updateHint();
@@ -568,6 +576,7 @@
   $("fbclose").addEventListener("click",closeFeedback);
   $("fbsend").addEventListener("click",sendFeedback);
   $("hintbtn").addEventListener("click",giveHint);
+  let _rz=null;window.addEventListener("resize",function(){clearTimeout(_rz);_rz=setTimeout(function(){if(!drag)render();},120);});
   document.addEventListener("pointermove",onPointerMove,{passive:false});
   document.addEventListener("pointerup",onPointerUp);
   document.addEventListener("pointercancel",onPointerUp);
