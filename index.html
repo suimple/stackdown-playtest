@@ -294,7 +294,7 @@
   let hintMsg=null, hintKind="", hintUntil=0;
   let humanTimes=[], dragLock=false, prevWasteId=null;
   let coaching=false, coachIdx=0, teachKind=null, revealRivals=false;
-  let firstPotDone=false, matchStartMs=0;
+  let firstPotDone=false, matchStartMs=0, curFirstTime=false;
 
   const $=id=>document.getElementById(id);
   const last=a=>a[a.length-1];
@@ -525,7 +525,7 @@
     if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(timeLeft<=30?" heat":"");}else render();}
   function startMatch(){NPLAYERS=4;firstPotDone=false;matchStartMs=performance.now();
     $("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
-    const firstTime=!seen();coaching=false;coachIdx=0;teachKind=null;revealRivals=!firstTime;
+    const firstTime=!seen();curFirstTime=firstTime;coaching=false;coachIdx=0;teachKind=null;revealRivals=!firstTime;
     setup();if(firstTime)dealForCoaching();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
     track("match_start",{secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:firstTime,match_no:matchesPlayed+1});
     if(firstTime)startCoaching();}
@@ -534,7 +534,7 @@
     const you0=players[0],myPlace=ranked.findIndex(r=>r.p.index===0)+1;
     lastResult={place:myPlace,pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0};
     matchesPlayed++; if(win.index===0) wins++;
-    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,match_no:matchesPlayed});
+    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:curFirstTime,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,match_no:matchesPlayed});
     $("endtitle").textContent=win.index===0?"You win! 🏆":win.name+" wins";
     $("endsub").textContent=win.index===0?`You stacked ${ranked[0].final} cards into the pot — the most of anyone.`:`Most cards into the pot wins. You played ${you0.potCards}; ${win.name} played ${ranked[0].final}.`;
     const pod=$("podium");pod.innerHTML="";ranked.forEach((r,idx)=>{const p=r.p;const row=document.createElement("div");row.className="pr"+(idx===0?" win":"");
@@ -550,7 +550,7 @@
   $("howlink").addEventListener("click",openRules);
   $("optlink").addEventListener("click",()=>{const o=$("optblock");o.style.display=o.style.display==="none"?"block":"none";if(o.style.display==="block")track("options_opened");});
   $("again").addEventListener("click",startMatch);
-  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){running=false;clearInterval(timerId);stopBots();$("startov").style.display="flex";}});
+  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){if(running)track("match_quit",{pot:players[0].potCards,elapsed:MATCH_SECS-timeLeft,secs:MATCH_SECS});running=false;clearInterval(timerId);stopBots();$("startov").style.display="flex";}});
   $("helpbtn").addEventListener("click",openRules);
   $("rulesclose").addEventListener("click",()=>{$("rulesov").style.display="none";});
 
