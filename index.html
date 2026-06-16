@@ -35,7 +35,10 @@
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:radial-gradient(120% 80% at 50% -10%, #252a4d 0%, var(--table) 55%, #0f1120 100%);
     color:var(--ink);-webkit-user-select:none;user-select:none;overflow-x:hidden;touch-action:manipulation;}
-  .wrap{max-width:760px;margin:0 auto;padding:10px 12px calc(var(--hb) + 18px);position:relative}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 12px calc(var(--hb) + 18px);position:relative;display:flex;flex-direction:column;min-height:100vh;min-height:100svh}
+  /* pot + your piles form one cluster anchored just above the hand bar (proximity);
+     the slack sits up top under the rivals row and the cluster grows up into it. */
+  .playspace{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;min-height:0}
 
   .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
   .brand{font-weight:900;letter-spacing:2px;font-size:20px;text-transform:uppercase;
@@ -187,10 +190,11 @@
   <div class="pot-h" id="oppsh" style="display:none"><b>Rivals · racing you</b><span class="line"></span></div>
   <div class="opps" id="opps"></div>
 
-  <div class="pot-h"><b>Community Pot</b><span class="line"></span><span class="combo" id="combo">COMBO</span><span class="youstat">You&nbsp;<b id="youpot">0</b> <span class="place" id="place"></span></span></div>
-  <div class="pot" id="pot"></div>
-
-  <div class="works" id="works"></div>
+  <div class="playspace">
+    <div class="pot-h"><b>Community Pot</b><span class="line"></span><span class="combo" id="combo">COMBO</span><span class="youstat">You&nbsp;<b id="youpot">0</b> <span class="place" id="place"></span></span></div>
+    <div class="pot" id="pot"></div>
+    <div class="works" id="works"></div>
+  </div>
 </div>
 
 <div class="handbar" id="handbar">
@@ -480,8 +484,11 @@
     const cwPx=Math.max(46,Math.min(60,0.135*innerWidth)),cardH=cwPx*1.42;
     const hb=$("handbar"),hbR=hb?hb.getBoundingClientRect():null;
     if(hbR)document.documentElement.style.setProperty("--hb",Math.round(hbR.height)+"px");
-    const floor=hbR?hbR.top:innerHeight;            // fit the piles between the pot and the hand bar
-    const avail=Math.max(130,floor-wks.getBoundingClientRect().top-12);
+    // The pot+piles cluster hugs the hand bar; piles can grow up to the room left
+    // in the play space above the pot strip before reaching the rivals row.
+    const ps=$("playspace"),psH=ps?ps.getBoundingClientRect().height:innerHeight*0.5;
+    const potStrip=$("pot").getBoundingClientRect().height||96;
+    const avail=Math.max(120,psH-potStrip-50);
     let OFF=22;if(maxLen>1)OFF=Math.max(15,Math.min(22,(avail-cardH)/(maxLen-1)));
     for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];
       if(pile.length===0){const ph=placeholder("");ph.style.opacity=".4";col.appendChild(ph);}
