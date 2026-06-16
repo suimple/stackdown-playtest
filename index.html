@@ -475,8 +475,8 @@
       const rank=better+1;pl.textContent=(["","1st","2nd","3rd","4th"][rank]||rank+"th")+" of "+NPLAYERS;pl.classList.toggle("lead",rank===1);}}
 
     const sEl=$("stock");sEl.innerHTML="";const sw=document.createElement("div");sw.style.position="relative";
-    if(you.stock.length){const b=document.createElement("div");b.className="card back stock";b.style.setProperty("--bc","var(--p0)");b.addEventListener("click",onStockClick);sw.appendChild(b);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.stock.length;sw.appendChild(cnt);}
-    else{const ph=placeholder("↻");ph.classList.add("stock");ph.addEventListener("click",onStockClick);sw.appendChild(ph);}
+    if(you.stock.length){const b=document.createElement("div");b.className="card back stock";b.style.setProperty("--bc","var(--p0)");b.addEventListener("pointerdown",onStockTap);sw.appendChild(b);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.stock.length;sw.appendChild(cnt);}
+    else{const ph=placeholder("↻");ph.classList.add("stock");ph.addEventListener("pointerdown",onStockTap);sw.appendChild(ph);}
     if(teachKind==="deck")sw.firstChild.classList.add("teach");sEl.appendChild(sw);
 
     const wEl=$("waste");wEl.innerHTML="";
@@ -525,6 +525,8 @@
   let toastT=null;function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),ms||1600);}
 
   function onStockClick(){if(!draw(players[0]))hint("No cards left to flip.","warn");else{noteHuman();coachGate("draw");}}
+  // pointerdown (not click) so rapid flips never get dropped when the board re-renders mid-tap
+  function onStockTap(e){if(e&&e.button>0)return;if(e&&e.preventDefault)e.preventDefault();onStockClick();}
 
   // ---- first-time in-game coaching (non-blocking, runs during a real match) ----
   const COACH=[
