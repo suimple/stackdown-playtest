@@ -1,18 +1,22 @@
 <!--
-  STACKDOWN — Core Match Prototype v6  (playtest build)
+  STACKDOWN — Core Match Prototype v7  (playtest build)
   Single-player vs adaptive bots. A "feel test" you can hand to others.
 
   ───────────────────────────────────────────────────────────────────────
-  TO COLLECT FEEDBACK: find  const FEEDBACK_URL  in the script below.
-    • Easiest: set it to  "mailto:you@example.com"  → testers' Send button
-      opens a pre-filled email to you.
-    • Or paste a Google Form / Typeform URL.
-    • Leave it ""  → feedback is copied to the tester's clipboard to paste back.
-  TO SHARE A LINK: rename this file to  index.html , then either
-    • drag it onto  app.netlify.com/drop  (instant link), or
-    • put it in a GitHub repo and turn on Pages, or
-    • zip it and upload to itch.io as an HTML5 game.
-  (See the separate sharing guide for step-by-step.)
+  TWO THINGS TO CONFIGURE (both near the top of the <script> below):
+
+  1) FEEDBACK_URL — where the feedback button sends responses.
+       • "mailto:you@example.com"  → opens a pre-filled email to you.
+       • a Google Form / Typeform URL → opens it (answers also copied).
+       • ""  → feedback is copied to the tester's clipboard.
+
+  2) POSTHOG_KEY — product analytics (how players engage). Free tier:
+       • Make a free project at posthog.com, copy the Project API key
+         (starts with "phc_"), paste it into POSTHOG_KEY below, and set
+         POSTHOG_HOST to your region (us or eu). Leave "" to disable.
+       • Events captured: app_open, match_start, first_pot_play, coach_*,
+         hint_used, rules_opened, match_end, share, feedback. Build funnels
+         from these (e.g. % who finish the coach, matches per player).
   ───────────────────────────────────────────────────────────────────────
 -->
 <meta charset="utf-8" />
@@ -40,7 +44,6 @@
   .help{width:30px;height:30px;border-radius:50%;background:#0e1022;border:1px solid #2c2f52;color:var(--muted);font-weight:800;cursor:pointer;font-size:15px}
   .timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:24px;letter-spacing:1px;padding:4px 12px;border-radius:10px;background:#0e1022;border:1px solid #2c2f52;min-width:92px;text-align:center}
   .timer.heat{color:#fff;background:#3a0d1c;border-color:var(--red);animation:pulse .7s infinite;box-shadow:0 0 24px rgba(214,50,74,.6)}
-  .timer.practice{font-size:13px;letter-spacing:2px;color:var(--good);border-color:#1f5a3a;background:#0c1f17}
   @keyframes pulse{50%{box-shadow:0 0 38px rgba(255,90,120,.95)}}
 
   .opps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
@@ -58,10 +61,9 @@
   .pot-h .line{flex:1;height:1px;background:linear-gradient(90deg,#2c2f52,transparent)}
   .pot{min-height:96px;display:flex;flex-wrap:nowrap;gap:8px;justify-content:flex-start;align-items:center;padding:12px;border-radius:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
     background:repeating-linear-gradient(45deg,#1a1f3d 0 12px,#191d39 12px 24px);border:1px solid #2c2f52;touch-action:pan-x;transition:box-shadow .12s,outline-color .12s}
-  .pot .empty{margin:auto}
   .pot.drop-ok{outline:3px dashed var(--gold);outline-offset:3px;box-shadow:inset 0 0 30px rgba(255,210,63,.25)}
   .pot.drop-hot{outline:3px solid var(--gold);outline-offset:3px;box-shadow:inset 0 0 46px rgba(255,210,63,.55)}
-  .pot .empty{color:var(--muted);font-size:13px;align-self:center;padding:18px 8px;text-align:center}
+  .pot .empty{color:var(--muted);font-size:13px;padding:18px 8px;text-align:center;margin:auto}
 
   .hintbar{display:flex;align-items:center;gap:8px;margin:10px 2px 2px;min-height:34px;background:#0e1022;border:1px solid #2c2f52;border-radius:10px;padding:7px 10px;font-size:13px;line-height:1.3}
   .hintbar .ic{flex:0 0 auto;font-size:15px}
@@ -73,18 +75,15 @@
   .you-h .who{display:flex;align-items:center;gap:8px;font-weight:800}
   .combo{font-weight:900;letter-spacing:1px;color:var(--gold);opacity:0;transition:opacity .2s;text-shadow:0 0 14px rgba(255,210,63,.8)}
   .combo.on{opacity:1}
-  .you-net{font-size:13px;color:var(--muted)}.you-net b{color:var(--ink);font-size:18px}
+  .you-net{font-size:13px;color:var(--muted)}.you-net b{color:var(--good);font-size:20px}
   .place{font-size:12px;font-weight:900;letter-spacing:.5px;padding:2px 9px;border-radius:999px;background:#0e1022;border:1px solid #2c2f52;color:var(--muted)}
   .place.lead{color:#0e1022;background:var(--gold);border-color:var(--gold)}
-  .subt{font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:3px;text-align:center}
-  .subt.res{color:var(--good);font-weight:800}
-  .slot .lab b{color:var(--good)}
 
-  .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;touch-action:none}
+  .tray{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;touch-action:none;justify-content:center}
   .slot{display:flex;flex-direction:column;align-items:center;gap:4px;touch-action:none}
-  /* generous, scroll-proof tap zone around the tray cards (esp. the reserve) */
-  #reserve,#stock,#waste{touch-action:none;padding:5px;margin:-5px;border-radius:12px}
-  #reserve:active{background:rgba(25,224,200,.10)}
+  /* generous, scroll-proof tap zone around the tray cards */
+  #stock,#waste{touch-action:none;padding:5px;margin:-5px;border-radius:12px}
+  #stock:active{background:rgba(25,224,200,.10)}
   .slot .lab{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
   .works{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .work{min-height:150px;background:rgba(255,255,255,.02);border:1px dashed #2c2f52;border-radius:10px;padding:6px;position:relative;touch-action:none;transition:box-shadow .1s,border-color .1s,background .1s,transform .1s}
@@ -132,7 +131,7 @@
   .ov{position:fixed;inset:0;background:rgba(8,9,20,.82);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
   .panel{background:linear-gradient(180deg,#1c2142,#141833);border:1px solid #343a66;border-radius:18px;max-width:460px;width:100%;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
   .panel h1{margin:0 0 2px;font-size:30px;letter-spacing:2px;text-transform:uppercase;background:linear-gradient(180deg,#fff,#19e0c8);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .panel .tag{color:var(--muted);font-size:12px;margin-bottom:16px;letter-spacing:.5px;line-height:1.5}
+  .panel .tag{color:var(--muted);font-size:13px;margin-bottom:16px;letter-spacing:.3px;line-height:1.5}
   .opt{margin:12px 0}
   .opt .lab{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .seg{display:flex;gap:6px}
@@ -168,11 +167,11 @@
 
 <div class="wrap" id="wrap">
   <div class="bar">
-    <div class="brand">Stackdown<small>playtest build · v6</small></div>
-    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
+    <div class="brand">Stackdown<small>playtest · v7</small></div>
+    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">2:00</div></div>
   </div>
 
-  <div class="pot-h" id="oppsh"><b>Rivals · racing you</b><span class="line"></span></div>
+  <div class="pot-h" id="oppsh" style="display:none"><b>Rivals · racing you</b><span class="line"></span></div>
   <div class="opps" id="opps"></div>
 
   <div class="pot-h"><b>Community Pot</b><span class="line"></span><span id="potcount" style="font-size:11px;color:var(--muted)"></span></div>
@@ -180,17 +179,16 @@
 
   <div class="hintbar" id="hintbar">
     <span class="ic">💡</span>
-    <span class="txt" id="hinttext">Tap a card to send it to the pot, or drag it where you want. Tap the Stock to flip.</span>
+    <span class="txt" id="hinttext">Tap a card to play it to the pot. Tap the deck to flip a new card.</span>
     <button class="hintbtn" id="hintbtn">Hint</button>
   </div>
 
   <div class="you-h">
     <div class="who"><span class="dot" style="color:var(--p0)"></span>You <span class="place" id="place"></span> <span class="combo" id="combo">COMBO</span></div>
-    <div class="you-net">net <b id="younet">0</b> &nbsp;·&nbsp; reserve <b id="youres" style="font-size:13px">13</b></div>
+    <div class="you-net">in the pot <b id="youpot">0</b></div>
   </div>
 
   <div class="tray">
-    <div class="slot"><div class="lab"><b>Reserve</b></div><div id="reserve"></div><div class="subt res">empty to win</div></div>
     <div class="slot"><div class="lab">Stock</div><div id="stock"></div></div>
     <div class="slot"><div class="lab">Waste</div><div id="waste"></div></div>
   </div>
@@ -204,21 +202,23 @@
 <div class="toast" id="toast"></div>
 
 <div class="coach" id="coach">
-  <div class="step" id="coachstep">Step 1 of 6</div>
+  <div class="step" id="coachstep">Tip</div>
   <div class="msg" id="coachmsg"></div>
   <div class="acts" id="coachacts"></div>
 </div>
 
 <div class="ov" id="startov">
-  <div class="panel">
+  <div class="panel" style="text-align:center">
     <h1>Stackdown</h1>
-    <div class="tag">You vs. 3 bot rivals — everyone plays solitaire at the same time. All aces go to one shared pot in the middle. Empty your Reserve and drop the most cards before the buzzer.</div>
-    <div class="opt"><div class="lab">Match length</div>
-      <div class="seg" id="segLen"><button data-v="120">2:00</button><button data-v="180" class="on">3:00</button><button data-v="300">5:00</button></div></div>
-    <div class="opt"><div class="lab">Bot pressure</div>
-      <div class="seg" id="segDiff"><button data-v="1.7" class="on">Relaxed</button><button data-v="1.2">Even</button><button data-v="0.85">Pushy</button></div></div>
-    <div class="row" style="margin-top:18px;flex-direction:column"><button class="btn" id="tutbtn" style="width:100%">Learn to play · 30 sec</button>
-      <button class="btn alt" id="startbtn" style="width:100%">Skip to a match</button></div>
+    <div class="tag">A 2-minute solitaire showdown. Race 3 rivals to stack the most cards into one shared pot.</div>
+    <button class="btn" id="playbtn" style="width:100%;font-size:18px;padding:14px">▶&nbsp; Play</button>
+    <div class="row" style="margin-top:14px;gap:20px"><button class="linkbtn" id="howlink">How to play</button><button class="linkbtn" id="optlink">Options</button></div>
+    <div id="optblock" style="display:none;margin-top:12px;text-align:left">
+      <div class="opt"><div class="lab">Match length</div>
+        <div class="seg" id="segLen"><button data-v="120" class="on">2:00</button><button data-v="180">3:00</button><button data-v="300">5:00</button></div></div>
+      <div class="opt"><div class="lab">Bot pressure</div>
+        <div class="seg" id="segDiff"><button data-v="1.7" class="on">Relaxed</button><button data-v="1.2">Even</button><button data-v="0.85">Pushy</button></div></div>
+    </div>
   </div>
 </div>
 
@@ -226,13 +226,13 @@
   <div class="panel">
     <h1 style="font-size:24px">How to play</h1>
     <div class="legend">
-      <b>Two ways to play a card:</b> <b>tap</b> it to auto-play it — to the pot if it fits, otherwise onto a work pile. If a card fits more than one spot, those spots light up so you can <b>drag</b> it exactly where you want. While you drag, valid spots also light up:<br>
-      <div class="k"><span class="swatch" style="background:var(--gold)"></span> Pot glows gold</div> — drop it there to score (+1).<br>
+      <b>Goal:</b> get more cards into the shared <b>pot</b> than the bots before the buzzer. Most cards wins.<br><br>
+      <b>Playing a card:</b> <b>tap</b> it to auto-play it — to the pot if it fits, otherwise onto a work pile. If it fits more than one spot, those spots light up so you can <b>drag</b> it where you want.<br>
+      <div class="k"><span class="swatch" style="background:var(--gold)"></span> Pot glows gold</div> — drop a card there to score it.<br>
       <div class="k"><span class="swatch" style="background:var(--good)"></span> A pile glows green</div> — drop it there to stack.<br><br>
       <b>The pot</b> builds up by suit: A → 2 → 3 … → K. Anyone can play to any pile, and several piles of the same suit can be open at once — race for the slot.<br>
       <b>Your work piles</b> build down in alternating colours (red 7 on black 8) to free buried cards. An <b>empty pile is wild</b> — you can move any card onto it.<br>
-      <b>Stock</b>: tap the deck to flip a fresh card.<br>
-      <b>Reserve</b> (the badge): empty it for <b>+10</b>; every card left at the buzzer is <b>−2</b>. Your score already includes that.
+      <b>Deck</b>: tap it to flip a fresh card into your waste.
     </div>
     <div class="row" style="margin-top:16px"><button class="btn" id="rulesclose" style="width:100%">Got it</button></div>
   </div>
@@ -266,22 +266,35 @@
 (function(){
   "use strict";
 
-  // ===== PLAYTEST CONFIG (edit this one line) =====
-  // "mailto:you@example.com"  → Send opens a pre-filled email to you.
-  // a Google Form / Typeform URL → Send opens it (answers also copied to clipboard).
-  // ""  → Send copies the feedback to the tester's clipboard to paste back.
+  // ===== PLAYTEST CONFIG =====
   const FEEDBACK_URL = "mailto:jakeschirm@gmail.com";
+  // Paste your PostHog Project API key (starts with phc_) to enable analytics. Leave "" to disable.
+  const POSTHOG_KEY  = "";
+  const POSTHOG_HOST = "https://us.i.posthog.com";   // or "https://eu.i.posthog.com"
+
+  // ---- analytics (no-op until POSTHOG_KEY is set) ----
+  function initAnalytics(){ if(!POSTHOG_KEY) return;
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    try{ window.posthog.init(POSTHOG_KEY,{api_host:POSTHOG_HOST,capture_pageview:true,persistence:"localStorage+cookie"}); }catch(e){}
+  }
+  function track(ev,props){ try{ if(window.posthog&&window.posthog.capture) window.posthog.capture(ev,props||{}); }catch(e){} }
+
+  // ---- persistence helpers ----
+  function seen(){try{return !!localStorage.getItem("sd_seen");}catch(e){return false;}}
+  function markSeen(){try{localStorage.setItem("sd_seen","1");}catch(e){}}
 
   let matchesPlayed=0, wins=0, lastResult=null;
   const SUITS=["H","D","C","S"], REDS={H:1,D:1};
   const PCOLORS=["--p0","--p1","--p2","--p3"];
   const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
   const STREAK_WINDOW=5000;
-  let MATCH_SECS=180, BOT_FACTOR=1.7, NPLAYERS=4, tutorial=false, tutStep=0, teachStep=-1;
+  let MATCH_SECS=120, BOT_FACTOR=1.7, NPLAYERS=4;
 
   let players=[], foundations=[], timeLeft=0, timerId=null, running=false;
-  let hintMsg=null, hintKind="", hintUntil=0, firstRealCoachShown=false;
-  let humanTimes=[], dragLock=false, prevReserveId=null, prevWasteId=null;
+  let hintMsg=null, hintKind="", hintUntil=0;
+  let humanTimes=[], dragLock=false, prevWasteId=null;
+  let coaching=false, coachIdx=0, teachKind=null, revealRivals=false;
+  let firstPotDone=false, matchStartMs=0;
 
   const $=id=>document.getElementById(id);
   const last=a=>a[a.length-1];
@@ -292,39 +305,47 @@
   function makeDeck(owner){const d=[];for(const s of SUITS)for(let r=1;r<=13;r++)d.push({suit:s,rank:r,owner,id:s+r+"_"+owner});
     for(let i=d.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[d[i],d[j]]=[d[j],d[i]];}return d;}
   function newPlayer(i){const deck=makeDeck(i);return{index:i,name:NAMES[i],color:PCOLORS[i],isBot:i!==0,
-    reserve:deck.slice(0,13),work:[[deck[13]],[deck[14]],[deck[15]],[deck[16]]],stock:deck.slice(17),waste:[],
-    score:0,potCards:0,crowns:0,cleared:false,cleanAwarded:false,potTimes:[],_t:null};}
-  function setup(){players=[];for(let i=0;i<NPLAYERS;i++)players.push(newPlayer(i));foundations=[];timeLeft=MATCH_SECS;running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;}
-  function setupTutorial(){NPLAYERS=1;players=[newPlayer(0)];foundations=[];running=true;hintMsg=null;humanTimes=[];prevReserveId=null;prevWasteId=null;
-    const p=players[0];const pool=[...p.reserve,...p.work.flat(),...p.stock];const aces=[],rest=[];
-    pool.forEach(c=>(c.rank===1?aces:rest).push(c));
-    p.work=[[aces[0]],[aces[1]],[aces[2]],[rest.pop()]];p.reserve=rest.splice(0,12);p.reserve.push(aces[3]);p.stock=rest;p.waste=[];}
+    work:[[deck[0]],[deck[1]],[deck[2]],[deck[3]]],stock:deck.slice(4),waste:[],
+    potCards:0,crowns:0,cleared:false,potTimes:[],_t:null};}
+  function setup(){players=[];for(let i=0;i<NPLAYERS;i++)players.push(newPlayer(i));foundations=[];timeLeft=MATCH_SECS;running=true;hintMsg=null;humanTimes=[];prevWasteId=null;}
+  // For a first-time coached match, guarantee the player has an Ace ready to play.
+  function dealForCoaching(){const me=players[0];
+    if(me.work.some(w=>w.length&&last(w).rank===1))return;
+    const pull=arr=>{const i=arr.findIndex(c=>c.rank===1);return i>=0?arr.splice(i,1)[0]:null;};
+    let ace=pull(me.stock)||pull(me.waste);if(!ace){for(const w of me.work){ace=pull(w);if(ace)break;}}
+    if(ace)me.work[0].push(ace);}
 
   // rules
   function colorDiff(a,b){return isRed(a)!==isRed(b);}
   function canStackWork(mb,dest){if(dest.length===0)return true;const t=last(dest);return t.rank===mb.rank+1&&colorDiff(t,mb);}
   function runFrom(pile,idx){for(let k=idx;k<pile.length-1;k++){if(!(pile[k].rank===pile[k+1].rank+1&&colorDiff(pile[k],pile[k+1])))return null;}return pile.slice(idx);}
   function foundationFor(card){if(card.rank===1)return{kind:"new"};for(let i=0;i<foundations.length;i++){const f=foundations[i];if(f.suit===card.suit&&f.cards.length===card.rank-1)return{kind:"play",fi:i};}return null;}
-  function movingUnit(p,src){if(src.type==="reserve")return p.reserve.length?[last(p.reserve)]:null;if(src.type==="waste")return p.waste.length?[last(p.waste)]:null;if(src.type==="work")return runFrom(p.work[src.pi],src.start);return null;}
-  function anyPotMove(p){if(p.reserve.length&&foundationFor(last(p.reserve)))return true;if(p.waste.length&&foundationFor(last(p.waste)))return true;for(let i=0;i<4;i++){const pl=p.work[i];if(pl.length&&foundationFor(last(pl)))return true;}return false;}
+  function movingUnit(p,src){if(src.type==="waste")return p.waste.length?[last(p.waste)]:null;if(src.type==="work")return runFrom(p.work[src.pi],src.start);return null;}
+  function anyPotMove(p){if(p.waste.length&&foundationFor(last(p.waste)))return true;for(let i=0;i<4;i++){const pl=p.work[i];if(pl.length&&foundationFor(last(pl)))return true;}return false;}
 
-  // scoring
-  function award(p,card){p.score+=1;p.potCards+=1;const now=performance.now();p.potTimes.push(now);p.potTimes=p.potTimes.filter(t=>now-t<=STREAK_WINDOW);
-    let txt="+1",cls=p.color,big=false;if(p.potTimes.length>=3){p.score+=1;txt="+2";}if(card.rank===13){p.score+=5;p.crowns+=1;txt="+5 CROWN";big=true;cls="--gold";}
-    pop(txt,null,cls,big);if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");}}
-  function checkClear(p){if(!p.cleared&&p.reserve.length===0){p.cleared=true;if(!p.cleanAwarded){p.cleanAwarded=true;p.score+=10;pop("+10 CLEAR!",null,p.color,true);if(p.isBot)flashOpp(p.index);}}}
-  const net=p=>p.score-2*p.reserve.length;
+  // scoring — ranking metric is simply cards in the pot. Crowns/combos are flair only.
+  const score=p=>p.potCards;
+  function boardEmpty(p){return p.stock.length===0&&p.waste.length===0&&p.work.every(w=>w.length===0);}
+  function award(p,card){p.potCards+=1;const now=performance.now();p.potTimes.push(now);p.potTimes=p.potTimes.filter(t=>now-t<=STREAK_WINDOW);
+    let txt="+1",cls=p.color,big=false;
+    if(card.rank===13){p.crowns+=1;txt="👑";big=true;cls="--gold";}
+    else if(p.potTimes.length>=3){txt="🔥 +1";}
+    pop(txt,null,cls,big);
+    if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");}}
+  function checkClear(p){if(!p.cleared&&boardEmpty(p)){p.cleared=true;pop("🎉 CLEARED!",null,p.color,true);if(p.isBot)flashOpp(p.index);}}
 
   // moves
-  function playToFoundation(p,src){let card;if(src.type==="reserve")card=last(p.reserve);else if(src.type==="waste")card=last(p.waste);else card=last(p.work[src.pi]);
+  function playToFoundation(p,src){let card;if(src.type==="waste")card=last(p.waste);else card=last(p.work[src.pi]);
     if(!card)return false;const m=foundationFor(card);if(!m)return false;
-    if(src.type==="reserve")p.reserve.pop();else if(src.type==="waste")p.waste.pop();else p.work[src.pi].pop();
+    if(src.type==="waste")p.waste.pop();else p.work[src.pi].pop();
     let fi;if(m.kind==="new"){foundations.push({suit:card.suit,cards:[card]});fi=foundations.length-1;}else{foundations[m.fi].cards.push(card);fi=m.fi;}
-    award(p,card);checkClear(p);render();const el=document.querySelector('.fnd[data-fi="'+fi+'"]');if(el){el.classList.remove("hit");void el.offsetWidth;el.classList.add("hit");}return true;}
+    award(p,card);checkClear(p);
+    if(!p.isBot&&!firstPotDone){firstPotDone=true;track("first_pot_play",{ms:Math.round(performance.now()-matchStartMs)});}
+    render();const el=document.querySelector('.fnd[data-fi="'+fi+'"]');if(el){el.classList.remove("hit");void el.offsetWidth;el.classList.add("hit");}return true;}
   function moveToWork(p,src,destPi){const dest=p.work[destPi];let run;
-    if(src.type==="reserve")run=p.reserve.length?[last(p.reserve)]:null;else if(src.type==="waste")run=p.waste.length?[last(p.waste)]:null;else run=runFrom(p.work[src.pi],src.start);
+    if(src.type==="waste")run=p.waste.length?[last(p.waste)]:null;else run=runFrom(p.work[src.pi],src.start);
     if(!run||!run.length)return false;if(src.type==="work"&&src.pi===destPi)return false;if(!canStackWork(run[0],dest))return false;
-    if(src.type==="reserve")p.reserve.pop();else if(src.type==="waste")p.waste.pop();else p.work[src.pi].splice(src.start);
+    if(src.type==="waste")p.waste.pop();else p.work[src.pi].splice(src.start);
     for(const c of run)dest.push(c);checkClear(p);render();return true;}
   function draw(p){if(p.stock.length===0){if(p.waste.length===0)return false;p.stock=p.waste.reverse();p.waste=[];}p.waste.push(p.stock.pop());render();return true;}
 
@@ -351,7 +372,6 @@
     moveGhost(x,y);updateHot(x,y);
   }
   function moveGhost(x,y){if(!drag)return;drag.layer.style.left=(x-drag.offX)+"px";drag.layer.style.top=(y-drag.offY)+"px";}
-  // forgiving: expand each target by a margin, and if several match pick the nearest centre
   function pickTarget(x,y){if(!drag)return null;let best=null,bestD=Infinity;const M=30;
     for(const t of drag.targets){const r=t.el.getBoundingClientRect();
       if(x<r.left-M||x>r.right+M||y<r.top-M||y>r.bottom+M)continue;
@@ -365,8 +385,8 @@
     d.layer.remove();d.targets.forEach(t=>{t.el.classList.remove("drop-ok");t.el.classList.remove("drop-hot");});if(d.originEl)d.originEl.classList.remove("lifted");
     drag=null;dragLock=false;
     const p=players[0];
-    if(hit){if(hit.kind==="pot"){if(playToFoundation(p,d.src)){noteHuman();tutEvent("pot");}}
-      else{if(moveToWork(p,d.src,hit.pi)){noteHuman();tutEvent("work");}}return;}
+    if(hit){if(hit.kind==="pot"){if(playToFoundation(p,d.src)){noteHuman();coachGate("pot");}}
+      else{if(moveToWork(p,d.src,hit.pi)){noteHuman();coachGate("work");}}return;}
     if(!d.moved){ handleTap(d.src); return; }
     const mb=d.run[0];const opp=isRed(mb)?"black":"red";
     hint(`No spot there. ${rankTxt(mb.rank)}${suitSym(mb.suit)} needs a ${mb.rank===13?"empty pile":opp+" "+rankTxt(mb.rank+1)} to stack, or its slot in the pot.`,"warn");
@@ -390,8 +410,8 @@
     return {run,pot,stacks,empties};}
   function handleTap(src){clearHighlights();const p=players[0];const t=tapTargets(src);if(!t){render();return;}
     const meaningful=(t.pot?1:0)+t.stacks.length;
-    if(meaningful===1){if(t.pot){if(playToFoundation(p,src)){noteHuman();tutEvent("pot");}}
-      else if(moveToWork(p,src,t.stacks[0])){noteHuman();tutEvent("work");}return;}
+    if(meaningful===1){if(t.pot){if(playToFoundation(p,src)){noteHuman();coachGate("pot");}}
+      else if(moveToWork(p,src,t.stacks[0])){noteHuman();coachGate("work");}return;}
     if(meaningful===0){
       if(t.empties.length){highlightDrops(t.empties.map(pi=>({kind:"work",pi})));hint("An empty pile takes any card — drag this onto a glowing pile.","");}
       else{const mb=t.run[0];const opp=isRed(mb)?"black":"red";
@@ -401,9 +421,8 @@
     highlightDrops(drops);hint("This card fits more than one spot — drag it where you want.","");}
 
   // bots
-  function botAct(p){if(!running)return;const srcs=[{type:"reserve"}];for(let i=0;i<4;i++)if(p.work[i].length)srcs.push({type:"work",pi:i,start:p.work[i].length-1});if(p.waste.length)srcs.push({type:"waste"});
-    for(const s of srcs){let card=s.type==="reserve"?last(p.reserve):s.type==="waste"?last(p.waste):last(p.work[s.pi]);if(card&&foundationFor(card)){if(playToFoundation(p,s)){flashOpp(p.index);return;}}}
-    if(p.reserve.length)for(let i=0;i<4;i++){if(moveToWork(p,{type:"reserve"},i))return;}
+  function botAct(p){if(!running)return;const srcs=[];for(let i=0;i<4;i++)if(p.work[i].length)srcs.push({type:"work",pi:i,start:p.work[i].length-1});if(p.waste.length)srcs.push({type:"waste"});
+    for(const s of srcs){let card=s.type==="waste"?last(p.waste):last(p.work[s.pi]);if(card&&foundationFor(card)){if(playToFoundation(p,s)){flashOpp(p.index);return;}}}
     if(p.waste.length)for(let i=0;i<4;i++){if(moveToWork(p,{type:"waste"},i))return;}
     for(let a=0;a<4;a++){const run=p.work[a].length?runFrom(p.work[a],0):null;if(!run)continue;for(let b=0;b<4;b++){if(a!==b&&p.work[b].length&&canStackWork(run[0],p.work[b])){if(moveToWork(p,{type:"work",pi:a,start:0},b))return;}}}
     draw(p);}
@@ -417,47 +436,45 @@
 
   function render(){
     const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");
-    if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";}else{tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
+    tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");
 
-    const oh=$("oppsh");if(oh)oh.style.display=(NPLAYERS<=1)?"none":"";
-    const opps=$("opps");opps.className="opps"+(NPLAYERS<=1?" solo":"");opps.innerHTML="";
-    for(let i=1;i<NPLAYERS;i++){const p=players[i];const el=document.createElement("div");el.className="opp";el.dataset.pi=i;
-      el.innerHTML=`<div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}</div><div class="net" style="color:var(${p.color})">${net(p)}</div><div class="sub">reserve ${p.reserve.length}${p.cleared?" · CLEAR":""} · pot ${p.potCards}</div>`;opps.appendChild(el);}
+    const showRivals=revealRivals&&NPLAYERS>1;
+    const oh=$("oppsh");if(oh)oh.style.display=showRivals?"":"none";
+    const opps=$("opps");opps.className="opps"+(showRivals?"":" solo");opps.innerHTML="";
+    if(showRivals)for(let i=1;i<NPLAYERS;i++){const p=players[i];const el=document.createElement("div");el.className="opp";el.dataset.pi=i;
+      el.innerHTML=`<div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}</div><div class="net" style="color:var(${p.color})">${p.potCards}</div><div class="sub">${p.crowns?"👑 "+p.crowns+" · ":""}${p.cleared?"cleared!":"in the pot"}</div>`;opps.appendChild(el);}
 
     const pot=$("pot");pot.innerHTML="";
-    if(foundations.length===0){const e=document.createElement("div");e.className="empty";e.innerHTML="The pot is empty.<br>Drag an <b>Ace</b> here to open the first pile.";pot.appendChild(e);}
+    if(foundations.length===0){const e=document.createElement("div");e.className="empty";e.innerHTML="The pot is empty.<br>Play an <b>Ace</b> here to open the first pile.";pot.appendChild(e);}
     else foundations.forEach((f,fi)=>{const w=document.createElement("div");w.className="fnd";w.dataset.fi=fi;const top=last(f.cards);if(top.rank===13){const cr=document.createElement("div");cr.className="crown";cr.textContent="👑";w.appendChild(cr);}w.appendChild(faceCard(top));const cnt=document.createElement("div");cnt.className="count";cnt.textContent=f.cards.length;w.appendChild(cnt);pot.appendChild(w);});
     $("potcount").textContent=foundations.length?foundations.length+" piles open":"";
 
-    const you=players[0];$("younet").textContent=net(you);$("youres").textContent=you.reserve.length;
+    const you=players[0];$("youpot").textContent=you.potCards;
     const pl=$("place");
-    if(pl){if(NPLAYERS<=1){pl.style.display="none";}else{pl.style.display="";const yn=net(you);let better=0;
-      for(const q of players){if(q===you)continue;const qn=net(q);if(qn>yn||(qn===yn&&q.potCards>you.potCards))better++;}
+    if(pl){if(!showRivals){pl.style.display="none";}else{pl.style.display="";const yv=score(you);let better=0;
+      for(const q of players){if(q===you)continue;if(score(q)>yv||(score(q)===yv&&q.crowns>you.crowns))better++;}
       const rank=better+1;pl.textContent=(["","1st","2nd","3rd","4th"][rank]||rank+"th")+" of "+NPLAYERS;pl.classList.toggle("lead",rank===1);}}
-
-    const rEl=$("reserve");rEl.innerHTML="";
-    if(you.reserve.length){const w=document.createElement("div");w.style.position="relative";const top=last(you.reserve);const c=faceCard(top);attachDrag(c,{type:"reserve"});if(teachStep===1&&foundationFor(top))c.classList.add("teach");if(prevReserveId&&prevReserveId!==top.id)c.classList.add("enter");prevReserveId=top.id;w.appendChild(c);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.reserve.length;w.appendChild(cnt);rEl.appendChild(w);}
-    else{prevReserveId=null;const ph=placeholder("✓");ph.style.color="var(--p0)";ph.style.borderColor="var(--p0)";rEl.appendChild(ph);}
 
     const sEl=$("stock");sEl.innerHTML="";const sw=document.createElement("div");sw.style.position="relative";
     if(you.stock.length){const b=document.createElement("div");b.className="card back stock";b.style.setProperty("--bc","var(--p0)");b.addEventListener("click",onStockClick);sw.appendChild(b);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.stock.length;sw.appendChild(cnt);}
     else{const ph=placeholder("↻");ph.classList.add("stock");ph.addEventListener("click",onStockClick);sw.appendChild(ph);}
-    if(teachStep===3)sw.firstChild.classList.add("teach");sEl.appendChild(sw);
+    if(teachKind==="deck")sw.firstChild.classList.add("teach");sEl.appendChild(sw);
 
     const wEl=$("waste");wEl.innerHTML="";
-    if(you.waste.length){const top=last(you.waste);const c=faceCard(top);attachDrag(c,{type:"waste"});if(prevWasteId&&prevWasteId!==top.id)c.classList.add("enter");prevWasteId=top.id;wEl.appendChild(c);}else{prevWasteId=null;wEl.appendChild(placeholder(""));}
+    if(you.waste.length){const top=last(you.waste);const c=faceCard(top);attachDrag(c,{type:"waste"});if(teachKind==="ace"&&top.rank===1&&foundationFor(top))c.classList.add("teach");if(prevWasteId&&prevWasteId!==top.id)c.classList.add("enter");prevWasteId=top.id;wEl.appendChild(c);}else{prevWasteId=null;wEl.appendChild(placeholder(""));}
 
     const wks=$("works");wks.innerHTML="";
     // Fan offset adapts to the space left below the tray so the tallest pile's
-    // bottom card stays on screen — squished (min 15px, keeps rank corners legible)
-    // when stacks get long, full 22px otherwise.
+    // bottom card stays on screen — squished (min 15px) when stacks get long.
     const maxLen=Math.max(1,you.work[0].length,you.work[1].length,you.work[2].length,you.work[3].length);
     const cwPx=Math.max(46,Math.min(60,0.135*innerWidth)),cardH=cwPx*1.42;
     const avail=Math.max(150,innerHeight-wks.getBoundingClientRect().top-16);
     let OFF=22;if(maxLen>1)OFF=Math.max(15,Math.min(22,(avail-cardH)/(maxLen-1)));
     for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];
       if(pile.length===0){const ph=placeholder("");ph.style.opacity=".4";col.appendChild(ph);}
-      pile.forEach((card,idx)=>{const c=faceCard(card);if(runFrom(pile,idx))attachDrag(c,{type:"work",pi,start:idx});c.style.top=(idx*OFF)+"px";col.appendChild(c);});
+      pile.forEach((card,idx)=>{const c=faceCard(card);if(runFrom(pile,idx))attachDrag(c,{type:"work",pi,start:idx});
+        if(teachKind==="ace"&&card.rank===1&&foundationFor(card))c.classList.add("teach");
+        c.style.top=(idx*OFF)+"px";col.appendChild(c);});
       col.style.height=Math.max(120,(pile.length-1)*OFF+cardH+8)+"px";pw.appendChild(col);wks.appendChild(pw);}
 
     applyTapHints();
@@ -468,98 +485,96 @@
   function hint(msg,kind){hintMsg=msg;hintKind=kind||"";hintUntil=Date.now()+2800;updateHint();}
   function updateHint(){const bar=$("hintbar"),txt=$("hinttext"),ic=bar.querySelector(".ic");let msg,kind="";
     if(hintMsg&&Date.now()<hintUntil){msg=hintMsg;kind=hintKind;}
-    else{const p=players[0];msg=anyPotMove(p)?"Tap a card to send it to the pot, or drag to place it on your board.":"No pot play right now — tap the Stock to flip, or drag a card onto a pile to set up.";}
+    else{const p=players[0];msg=anyPotMove(p)?"Tap a card to send it to the pot, or drag to place it on your board.":"No pot play right now — tap the deck to flip, or drag a card onto a pile to set up.";}
     txt.textContent=msg;bar.className="hintbar"+(kind?(" "+kind):"");ic.textContent=kind==="warn"?"⚠️":"💡";}
-  function giveHint(){const p=players[0];
-    const tops=[{s:{type:"reserve"},c:p.reserve.length?last(p.reserve):null},{s:{type:"waste"},c:p.waste.length?last(p.waste):null}];
+  function giveHint(){const p=players[0];track("hint_used");
+    const tops=[{s:{type:"waste"},c:p.waste.length?last(p.waste):null}];
     for(let i=0;i<4;i++)tops.push({s:{type:"work",pi:i,start:p.work[i].length-1},c:p.work[i].length?last(p.work[i]):null});
-    for(const t of tops){if(t.c&&foundationFor(t.c)){hint(`Try dragging the ${rankTxt(t.c.rank)}${suitSym(t.c.suit)} into the pot.`,"");return;}}
-    // a stacking move?
+    for(const t of tops){if(t.c&&foundationFor(t.c)){hint(`Try playing the ${rankTxt(t.c.rank)}${suitSym(t.c.suit)} into the pot.`,"");return;}}
     for(let a=0;a<4;a++){const pile=p.work[a];if(!pile.length)continue;const run=runFrom(pile,pile.length-1);if(!run)continue;for(let b=0;b<4;b++){if(a!==b&&canStackWork(run[0],p.work[b])){const t=last(p.work[b]);hint(`Move the ${rankTxt(run[0].rank)}${suitSym(run[0].suit)} onto the ${rankTxt(t.rank)}${suitSym(t.suit)} to free a card.`,"");return;}}}
-    if(p.reserve.length){const rc=last(p.reserve);for(let b=0;b<4;b++){if(canStackWork(rc,p.work[b])){hint(`Drop the ${rankTxt(rc.rank)}${suitSym(rc.suit)} from your reserve onto a pile to shrink your reserve.`,"");return;}}}
-    hint("Nothing obvious — tap the Stock to flip a new card.","");}
+    hint("Nothing obvious — tap the deck to flip a new card.","");}
 
   // fx
   function pop(text,anchorEl,colorVar,big){const fx=$("fx");const d=document.createElement("div");d.className="pop"+(big?" big":"");d.textContent=text;d.style.color=`var(${colorVar})`;let x=innerWidth/2,y=innerHeight*0.42;const ref=anchorEl||$("pot");if(ref){const r=ref.getBoundingClientRect();x=r.left+r.width/2;y=r.top+r.height/2;}d.style.left=x+"px";d.style.top=y+"px";fx.appendChild(d);setTimeout(()=>d.remove(),1000);}
   function flashOpp(i){const el=document.querySelector('.opp[data-pi="'+i+'"]');if(el){el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");}}
   let toastT=null;function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),ms||1600);}
 
-  function onStockClick(){if(!draw(players[0]))hint("No cards left to flip.","warn");else{noteHuman();tutEvent("draw");}}
+  function onStockClick(){if(!draw(players[0]))hint("No cards left to flip.","warn");else{noteHuman();coachGate("draw");}}
 
-  // tutorial
-  const TUT=[
-    {t:"Goal: drop more cards into the shared <b>pot</b> in the middle than your rivals do. You move cards by <b>dragging</b> them — let’s try it.",btn:"Show me"},
-    {t:"Grab the glowing <b>Ace</b> and drag it onto the pot in the middle to open a pile. (Drag with your finger or mouse.)",gate:"pot",spot:1},
-    {t:"That’s <b>+1</b>. The pot builds up by suit (A, 2, 3 …). Drag any other cards that fit, then continue.",btn:"Next"},
-    {t:"When nothing fits the pot, tap the <b>Stock</b> (the glowing deck) to flip a fresh card.",gate:"draw",spot:3},
-    {t:"You can also drag a card onto another to <b>stack down</b> in alternating colours — that frees buried cards. Try it, or skip ahead.",gate:"work",btn:"Next"},
-    {t:"Last thing: your <b>Reserve</b> (the badge count) is the real race. Empty it for <b>+10</b>; every card left at the buzzer costs <b>−2</b>. That’s everything!",btn:"Start a real match"}
+  // ---- first-time in-game coaching (non-blocking, runs during a real match) ----
+  const COACH=[
+    {t:"Welcome! Your goal: get more cards into the <b>pot</b> in the middle than the bots. Tap the glowing <b>Ace</b> to start the first pile.",gate:"pot",teach:"ace"},
+    {t:"That's <b>1 in the pot</b> 🃏 — see the scores up top? You're racing <b>3 bots</b> for the most cards before the buzzer.",reveal:true,btn:"Got it"},
+    {t:"Tap any card to auto-play it. Out of moves? Tap the <b>deck</b> to flip a new card. That's it — go stack 'em!",btn:"Let's play"}
   ];
-  function startTutorial(){tutorial=true;tutStep=0;$("startov").style.display="none";$("endov").style.display="none";setupTutorial();clearInterval(timerId);showStep(0);}
-  function showStep(i){const s=TUT[i];teachStep=(s.spot!==undefined)?s.spot:-1;const c=$("coach");c.classList.add("on");
-    $("coachstep").textContent="Step "+(i+1)+" of "+TUT.length;$("coachmsg").innerHTML=s.t;
+  function startCoaching(){coaching=true;coachIdx=0;track("coach_start");showCoach();}
+  function showCoach(){const s=COACH[coachIdx];if(!s){endCoaching(true);return;}
+    teachKind=s.teach||null;if(s.reveal)revealRivals=true;
+    const c=$("coach");c.classList.add("on");$("coachstep").textContent="Tip "+(coachIdx+1)+" / "+COACH.length;$("coachmsg").innerHTML=s.t;
     const acts=$("coachacts");acts.innerHTML="";
-    if(s.btn){const b=document.createElement("button");b.className="btn";b.textContent=s.btn;b.onclick=()=>{if(i===TUT.length-1)endTutorial();else{tutStep=i+1;showStep(tutStep);}};acts.appendChild(b);}
-    if(s.gate){const sk=document.createElement("button");sk.className="linkbtn";sk.textContent="Skip this step ›";sk.onclick=()=>{tutStep=i+1;if(tutStep<TUT.length)showStep(tutStep);else endTutorial();};acts.appendChild(sk);}
-    const bail=document.createElement("button");bail.className="linkbtn";bail.textContent="Skip tutorial";bail.style.marginLeft="auto";bail.onclick=endTutorial;acts.appendChild(bail);render();}
-  function tutEvent(type){if(!tutorial)return;const s=TUT[tutStep];if(s&&s.gate===type){tutStep++;if(tutStep<TUT.length)showStep(tutStep);else endTutorial();}}
-  function endTutorial(){tutorial=false;teachStep=-1;$("coach").classList.remove("on");startRealMatch();}
+    if(s.btn){const b=document.createElement("button");b.className="btn";b.textContent=s.btn;b.onclick=function(){coachIdx++;showCoach();};acts.appendChild(b);}
+    const bail=document.createElement("button");bail.className="linkbtn";bail.textContent="Skip tips";bail.style.marginLeft="auto";bail.onclick=function(){endCoaching(false);};acts.appendChild(bail);
+    render();}
+  function coachGate(type){if(!coaching)return;const s=COACH[coachIdx];if(s&&s.gate===type){coachIdx++;showCoach();}}
+  function endCoaching(complete){coaching=false;teachKind=null;$("coach").classList.remove("on");revealRivals=true;markSeen();track(complete?"coach_complete":"coach_skip",{step:coachIdx});render();}
 
   // lifecycle
-  function updateTimer(){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");if(tutorial){tEl.textContent="PRACTICE";tEl.className="timer practice";return;}tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(running&&timeLeft<=30?" heat":"");}
   function tick(){timeLeft--;
-    if(timeLeft===60)toast("⏱ One minute left — empty that Reserve!",2200);
+    if(timeLeft===60)toast("⏱ One minute left!",2000);
     else if(timeLeft===10)toast("⏱ Final 10 seconds!",1800);
-    if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag)updateTimer();else render();}
-  function startRealMatch(){tutorial=false;teachStep=-1;NPLAYERS=4;$("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
-    setup();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
-    if(!firstRealCoachShown){firstRealCoachShown=true;setTimeout(function(){toast("Rivals share this pot — grab a slot before they take it!",2600);},1100);}}
-  function startMatch(){startRealMatch();}
-  function endGame(){running=false;clearInterval(timerId);stopBots();
-    const ranked=players.map(p=>({p,final:net(p)})).sort((a,b)=>b.final-a.final||b.p.potCards-a.p.potCards);const win=ranked[0].p;
+    if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(timeLeft<=30?" heat":"");}else render();}
+  function startMatch(){NPLAYERS=4;firstPotDone=false;matchStartMs=performance.now();
+    $("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
+    const firstTime=!seen();coaching=false;coachIdx=0;teachKind=null;revealRivals=!firstTime;
+    setup();if(firstTime)dealForCoaching();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
+    track("match_start",{secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:firstTime,match_no:matchesPlayed+1});
+    if(firstTime)startCoaching();}
+  function endGame(){running=false;clearInterval(timerId);stopBots();coaching=false;teachKind=null;$("coach").classList.remove("on");
+    const ranked=players.map(p=>({p,final:p.potCards})).sort((a,b)=>b.final-a.final||b.p.crowns-a.p.crowns);const win=ranked[0].p;
     const you0=players[0],myPlace=ranked.findIndex(r=>r.p.index===0)+1;
-    lastResult={place:myPlace,n:net(you0),pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0};
+    lastResult={place:myPlace,pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0};
     matchesPlayed++; if(win.index===0) wins++;
-    $("endtitle").textContent=win.index===0?"You win!":win.name+" wins";
-    $("endsub").textContent=win.index===0?"You stacked down the most. Net "+ranked[0].final+".":"Final standings — net is pot + bonuses − reserve penalty.";
+    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,match_no:matchesPlayed});
+    $("endtitle").textContent=win.index===0?"You win! 🏆":win.name+" wins";
+    $("endsub").textContent=win.index===0?`You stacked ${ranked[0].final} cards into the pot — the most of anyone.`:`Most cards into the pot wins. You played ${you0.potCards}; ${win.name} played ${ranked[0].final}.`;
     const pod=$("podium");pod.innerHTML="";ranked.forEach((r,idx)=>{const p=r.p;const row=document.createElement("div");row.className="pr"+(idx===0?" win":"");
-      row.innerHTML=`<div class="rk">${idx+1}</div><div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}<span class="bd">pot ${p.potCards} · ${p.cleared?"cleared":"reserve "+p.reserve.length}</span></div><div class="sc" style="color:var(${p.color})">${r.final}</div>`;pod.appendChild(row);});
+      row.innerHTML=`<div class="rk">${idx+1}</div><div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}<span class="bd">${p.crowns?("👑"+p.crowns+" · "):""}${p.cleared?"cleared!":"cards in pot"}</span></div><div class="sc" style="color:var(${p.color})">${p.potCards}</div>`;pod.appendChild(row);});
     $("endov").style.display="flex";if(win.index===0)cascade();}
   function cascade(){const layer=$("cascade");layer.innerHTML="";const cols=14;for(let i=0;i<70;i++){const c=document.createElement("div");c.className="cc";c.style.left=((i%cols)/(cols-1)*100)+"%";c.style.top="-60px";const dur=1.6+Math.random()*1.4,delay=Math.random()*1.2;c.style.transition=`transform ${dur}s cubic-bezier(.4,0,.7,1) ${delay}s`;layer.appendChild(c);requestAnimationFrame(()=>requestAnimationFrame(()=>{c.style.transform=`translateY(${innerHeight+120}px) rotate(${(Math.random()*2-1)*220}deg)`;}));}setTimeout(()=>layer.innerHTML="",4200);}
 
   // chrome
   function seg(id,cb){$(id).querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{$(id).querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cb(parseFloat(b.dataset.v));}));}
   seg("segLen",v=>MATCH_SECS=v);seg("segDiff",v=>BOT_FACTOR=v);
-  $("tutbtn").addEventListener("click",startTutorial);
-  $("startbtn").addEventListener("click",startMatch);
-  $("again").addEventListener("click",()=>{$("startov").style.display="flex";$("endov").style.display="none";});
-  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?"))$("startov").style.display="flex";});
-  $("helpbtn").addEventListener("click",()=>{$("rulesov").style.display="flex";});
+  function openRules(){$("rulesov").style.display="flex";track("rules_opened");}
+  $("playbtn").addEventListener("click",startMatch);
+  $("howlink").addEventListener("click",openRules);
+  $("optlink").addEventListener("click",()=>{const o=$("optblock");o.style.display=o.style.display==="none"?"block":"none";if(o.style.display==="block")track("options_opened");});
+  $("again").addEventListener("click",startMatch);
+  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){running=false;clearInterval(timerId);stopBots();$("startov").style.display="flex";}});
+  $("helpbtn").addEventListener("click",openRules);
   $("rulesclose").addEventListener("click",()=>{$("rulesov").style.display="none";});
 
   // feedback
   const fb={fun:null,pace:null,clear:null};
   document.querySelectorAll(".fbseg").forEach(g=>g.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{g.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");fb[g.dataset.k]=b.dataset.v;})));
-  // ---- shareable result (mobile-first, viral) ----
+  // ---- shareable result (mobile-first) ----
   function fmtSecs(s){return Math.floor(s/60)+":"+((s%60)<10?"0":"")+(s%60);}
   function shareText(r){
     const medal=["","🥇","🥈","🥉","🏅"][r.place]||"🏅";
     const ord=["","1st","2nd","3rd","4th"][r.place]||(r.place+"th");
-    let line=`🃏 ${r.pot} cards to the pot`;
-    if(r.crowns)line+=` · 👑 ${r.crowns}`;
-    if(r.cleared)line+=` · ✅ cleared!`;
-    const taunt=r.won?"Can you take the crown? 🏆":"Bet you can't beat me 😤";
+    const taunt=r.won?"Can you beat me? 🏆":"Bet you can't beat me 😤";
     const url=location.origin+location.pathname;
-    return `STACKDOWN ⚡ ${fmtSecs(r.secs)} race\n${medal} ${ord} of ${r.players} · net ${r.n}\n${line}\n${taunt}\n👉 ${url}`;}
+    return `STACKDOWN ⚡ ${fmtSecs(r.secs)}\n${medal} ${ord} of ${r.players} — ${r.pot} cards in the pot 🃏${r.crowns?` · 👑${r.crowns}`:""}${r.cleared?" · ✅ cleared!":""}\n${taunt}\n👉 ${url}`;}
   function shareResult(){
-    const r=lastResult;if(!r)return;const text=shareText(r);
+    const r=lastResult;if(!r)return;const text=shareText(r);track("share",{pot:r.pot,place:r.place,won:r.won});
     if(navigator.share){navigator.share({title:"Stackdown",text:text}).catch(function(){});}
     else{copyText(text);toast("Result copied — paste it into a text! 📲",2800);}}
 
-  function openFeedback(){$("endov").style.display="none";$("fbov").style.display="flex";}
+  function openFeedback(){$("endov").style.display="none";$("fbov").style.display="flex";track("feedback_opened");}
   function closeFeedback(){$("fbov").style.display="none";}
   function copyText(t){try{if(navigator.clipboard)navigator.clipboard.writeText(t);}catch(e){}}
   function sendFeedback(){
+    track("feedback_sent",{fun:fb.fun,pace:fb.pace,clear:fb.clear,has_note:!!($("fbnote").value||"").trim(),matches:matchesPlayed});
     const note=($("fbnote").value||"").trim();
     const summary="Stackdown playtest feedback\n"+
       "Fun: "+(fb.fun||"-")+"\nPace: "+(fb.pace||"-")+"\nClarity: "+(fb.clear||"-")+
@@ -581,6 +596,7 @@
   document.addEventListener("pointerup",onPointerUp);
   document.addEventListener("pointercancel",onPointerUp);
 
+  initAnalytics();track("app_open");
   setup();render();running=false;
 })();
 </script>

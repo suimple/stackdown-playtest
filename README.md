@@ -10,15 +10,15 @@ It's one self-contained file, `index.html` — no build step, no dependencies. O
 
 ## How to play
 
+**Goal: get more cards into the shared pot than the bots before the buzzer. Most cards wins.**
+
 - **Tap** a card to auto-play it — to the pot if it fits, otherwise onto a work pile. If it fits more than one spot, those spots light up so you can **drag** it where you want.
 - **Drag** a card to place it exactly where you want — the pot or a work pile. Valid spots light up while you drag.
 - An **empty pile is wild** — you can move any card onto it.
-- **Tap the Stock** to flip a fresh card.
+- **Tap the deck** to flip a fresh card into your waste.
 - Build your **work piles** down in alternating colours (red 7 on black 8) to free buried cards.
-- Empty your **Reserve** pile for +10; every card left at the buzzer is −2.
-- Scoring: +1 per card to the pot, +5 Crown (play a King), +1 combo while you're hot, +10 reserve clear, −2 per leftover reserve card.
 
-There's a 30-second guided tutorial on the start screen, and a **?** button for the rules anytime. At the buzzer, **📲 Share my result** opens your phone's share sheet (Messages, etc.) with a quick brag card and a link back to the game.
+First launch drops you straight into a guided match with a couple of in-context tips (no setup screen). A **?** button shows the rules anytime, and **Options** on the start screen tweaks match length / bot pressure. At the buzzer, **📲 Share my result** opens your phone's share sheet (Messages, etc.) with a quick brag card and a link back to the game.
 
 ## Feedback
 
@@ -29,6 +29,17 @@ const FEEDBACK_URL = "mailto:jakeschirm@gmail.com";
 ```
 
 (Set it to a Google Form / Typeform URL instead, or `""` to copy feedback to the clipboard.)
+
+## Analytics (how players engage)
+
+Optional product analytics via [PostHog](https://posthog.com) (free tier). Make a free project, copy the **Project API key** (starts with `phc_`), and paste it near the top of the `<script>` in `index.html`:
+
+```js
+const POSTHOG_KEY  = "phc_xxx";                 // "" disables analytics
+const POSTHOG_HOST = "https://us.i.posthog.com"; // or eu
+```
+
+Events captured: `app_open`, `match_start`, `first_pot_play` (time-to-first-play), `coach_start/complete/skip`, `hint_used`, `rules_opened`, `match_end` (pot count, placement, won), `share`, `feedback_sent`. Build funnels from these — e.g. *% who finish the coach*, *matches per player*, *where first-timers drop off*. Leave the key blank and nothing is loaded or sent.
 
 ## Hosting on GitHub Pages
 
