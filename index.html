@@ -168,7 +168,7 @@
 <div class="wrap" id="wrap">
   <div class="bar">
     <div class="brand">Stackdown<small>playtest · v7</small></div>
-    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">2:00</div></div>
+    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
   </div>
 
   <div class="pot-h" id="oppsh" style="display:none"><b>Rivals · racing you</b><span class="line"></span></div>
@@ -210,12 +210,12 @@
 <div class="ov" id="startov">
   <div class="panel" style="text-align:center">
     <h1>Stackdown</h1>
-    <div class="tag">A 2-minute solitaire showdown. Race 3 rivals to stack the most cards into one shared pot.</div>
+    <div class="tag">A 3-minute solitaire showdown. Race 3 rivals to stack the most cards into one shared pot.</div>
     <button class="btn" id="playbtn" style="width:100%;font-size:18px;padding:14px">▶&nbsp; Play</button>
     <div class="row" style="margin-top:14px;gap:20px"><button class="linkbtn" id="howlink">How to play</button><button class="linkbtn" id="optlink">Options</button></div>
     <div id="optblock" style="display:none;margin-top:12px;text-align:left">
       <div class="opt"><div class="lab">Match length</div>
-        <div class="seg" id="segLen"><button data-v="120" class="on">2:00</button><button data-v="180">3:00</button><button data-v="300">5:00</button></div></div>
+        <div class="seg" id="segLen"><button data-v="180" class="on">3:00</button><button data-v="240">4:00</button><button data-v="300">5:00</button></div></div>
       <div class="opt"><div class="lab">Bot pressure</div>
         <div class="seg" id="segDiff"><button data-v="1.7" class="on">Relaxed</button><button data-v="1.2">Even</button><button data-v="0.85">Pushy</button></div></div>
     </div>
@@ -288,7 +288,7 @@
   const PCOLORS=["--p0","--p1","--p2","--p3"];
   const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
   const STREAK_WINDOW=5000;
-  let MATCH_SECS=120, BOT_FACTOR=1.7, NPLAYERS=4;
+  let MATCH_SECS=180, BOT_FACTOR=1.7, NPLAYERS=4;
 
   let players=[], foundations=[], timeLeft=0, timerId=null, running=false;
   let hintMsg=null, hintKind="", hintUntil=0;
