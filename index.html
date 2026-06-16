@@ -28,13 +28,14 @@
     --card:#f7f3e8;--card-edge:#d8d2bf;--red:#d6324a;--black:#23253a;
     --p0:#19e0c8;--p1:#ff4d9d;--p2:#ffd23f;--p3:#ff7a3c;
     --gold:#ffd23f;--good:#46e08a;--bevel-lt:rgba(255,255,255,.35);--bevel-dk:rgba(0,0,0,.45);
+    --hb:172px; /* runtime-measured height of the fixed bottom hand bar */
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     background:radial-gradient(120% 80% at 50% -10%, #252a4d 0%, var(--table) 55%, #0f1120 100%);
     color:var(--ink);-webkit-user-select:none;user-select:none;overflow-x:hidden;touch-action:manipulation;}
-  .wrap{max-width:760px;margin:0 auto;padding:10px 12px 30px;position:relative}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 12px calc(var(--hb) + 18px);position:relative}
 
   .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
   .brand{font-weight:900;letter-spacing:2px;font-size:20px;text-transform:uppercase;
@@ -85,6 +86,18 @@
   #stock,#waste{touch-action:none;padding:5px;margin:-5px;border-radius:12px}
   #stock:active{background:rgba(25,224,200,.10)}
   .slot .lab{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+
+  /* fixed bottom hand bar — the draw pile lives in the thumb zone, cards move UP */
+  .handbar{position:fixed;left:0;right:0;bottom:0;z-index:32;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(15,17,32,0),#10121f 32%)}
+  .hb-inner{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+  .hb-cards{display:flex;gap:20px;align-items:flex-end;justify-content:center}
+  .handbar .slot{display:flex;flex-direction:column;align-items:center;gap:3px;touch-action:none}
+  .handbar .card,.handbar .ph{--cw:clamp(64px,20vw,86px)}
+  .handbar #stock,.handbar #waste{touch-action:none;padding:6px;margin:-6px;border-radius:12px}
+  .handbar #stock:active{background:rgba(25,224,200,.12)}
+  .handbar .hintbar{margin:0}
+  .youstat{font-size:12px;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .youstat b{color:var(--good);font-size:16px}
   .works{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .work{min-height:150px;background:rgba(255,255,255,.02);border:1px dashed #2c2f52;border-radius:10px;padding:6px;position:relative;touch-action:none;transition:box-shadow .1s,border-color .1s,background .1s,transform .1s}
   .work.drop-ok{border:2px dashed var(--good);background:rgba(70,224,138,.08)}
@@ -151,7 +164,7 @@
   .cascade{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
   .cc{position:absolute;width:34px;height:48px;border-radius:5px;background:var(--card);border:1px solid var(--card-edge);will-change:transform}
 
-  .coach{position:fixed;left:50%;bottom:14px;top:auto;transform:translateX(-50%);z-index:48;width:min(680px,94vw);max-height:46vh;overflow:auto;background:linear-gradient(180deg,#243056,#182142);border:1px solid #3f64b8;border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:none}
+  .coach{position:fixed;left:50%;bottom:calc(var(--hb) + 12px);top:auto;transform:translateX(-50%);z-index:48;width:min(680px,94vw);max-height:46vh;overflow:auto;background:linear-gradient(180deg,#243056,#182142);border:1px solid #3f64b8;border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);display:none}
   .coach.on{display:block}
   .coach .step{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#8fb2ff;margin-bottom:3px}
   .coach .msg{font-size:14px;line-height:1.45}
@@ -161,40 +174,37 @@
   .pop{position:absolute;font-weight:900;font-size:20px;transform:translate(-50%,-50%);text-shadow:0 2px 8px rgba(0,0,0,.6);animation:pop 1s ease-out forwards}
   .pop.big{font-size:30px}
   @keyframes pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-160%) scale(1.05)}}
-  .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:45;background:#0e1022;border:1px solid #343a66;color:var(--ink);padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;max-width:90vw;text-align:center}
+  .toast{position:fixed;left:50%;bottom:calc(var(--hb) + 12px);transform:translateX(-50%);z-index:45;background:#0e1022;border:1px solid #343a66;color:var(--ink);padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;max-width:90vw;text-align:center}
   .toast.on{opacity:1}
 </style>
 
 <div class="wrap" id="wrap">
   <div class="bar">
     <div class="brand">Stackdown<small>playtest · v7</small></div>
-    <div class="bar-right"><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
+    <div class="bar-right"><button class="help" id="restart" title="New match">↻</button><button class="help" id="fbbtn" title="Give feedback">💬</button><button class="help" id="helpbtn" title="How to play">?</button><div class="timer" id="timer">3:00</div></div>
   </div>
 
   <div class="pot-h" id="oppsh" style="display:none"><b>Rivals · racing you</b><span class="line"></span></div>
   <div class="opps" id="opps"></div>
 
-  <div class="pot-h"><b>Community Pot</b><span class="line"></span><span id="potcount" style="font-size:11px;color:var(--muted)"></span></div>
+  <div class="pot-h"><b>Community Pot</b><span class="line"></span><span class="combo" id="combo">COMBO</span><span class="youstat">You&nbsp;<b id="youpot">0</b> <span class="place" id="place"></span></span></div>
   <div class="pot" id="pot"></div>
 
-  <div class="hintbar" id="hintbar">
-    <span class="ic">💡</span>
-    <span class="txt" id="hinttext">Tap a card to play it to the pot. Tap the deck to flip a new card.</span>
-    <button class="hintbtn" id="hintbtn">Hint</button>
-  </div>
-
-  <div class="you-h">
-    <div class="who"><span class="dot" style="color:var(--p0)"></span>You <span class="place" id="place"></span> <span class="combo" id="combo">COMBO</span></div>
-    <div class="you-net">in the pot <b id="youpot">0</b></div>
-  </div>
-
-  <div class="tray">
-    <div class="slot"><div class="lab">Stock</div><div id="stock"></div></div>
-    <div class="slot"><div class="lab">Waste</div><div id="waste"></div></div>
-  </div>
   <div class="works" id="works"></div>
+</div>
 
-  <div class="row" style="margin-top:16px"><button class="btn alt" id="restart">New match</button></div>
+<div class="handbar" id="handbar">
+  <div class="hb-inner">
+    <div class="hintbar" id="hintbar">
+      <span class="ic">💡</span>
+      <span class="txt" id="hinttext">Tap your card to play it up to the pot or a pile. Tap the deck for a new card.</span>
+      <button class="hintbtn" id="hintbtn">Hint</button>
+    </div>
+    <div class="hb-cards">
+      <div class="slot"><div class="lab">Deck · tap</div><div id="stock"></div></div>
+      <div class="slot"><div class="lab">Your card</div><div id="waste"></div></div>
+    </div>
+  </div>
 </div>
 
 <div id="fx"></div>
@@ -447,7 +457,7 @@
     const pot=$("pot");pot.innerHTML="";
     if(foundations.length===0){const e=document.createElement("div");e.className="empty";e.innerHTML="The pot is empty.<br>Play an <b>Ace</b> here to open the first pile.";pot.appendChild(e);}
     else foundations.forEach((f,fi)=>{const w=document.createElement("div");w.className="fnd";w.dataset.fi=fi;const top=last(f.cards);if(top.rank===13){const cr=document.createElement("div");cr.className="crown";cr.textContent="👑";w.appendChild(cr);}w.appendChild(faceCard(top));const cnt=document.createElement("div");cnt.className="count";cnt.textContent=f.cards.length;w.appendChild(cnt);pot.appendChild(w);});
-    $("potcount").textContent=foundations.length?foundations.length+" piles open":"";
+    {const pc=$("potcount");if(pc)pc.textContent=foundations.length?foundations.length+" piles open":"";}
 
     const you=players[0];$("youpot").textContent=you.potCards;
     const pl=$("place");
@@ -468,7 +478,10 @@
     // bottom card stays on screen — squished (min 15px) when stacks get long.
     const maxLen=Math.max(1,you.work[0].length,you.work[1].length,you.work[2].length,you.work[3].length);
     const cwPx=Math.max(46,Math.min(60,0.135*innerWidth)),cardH=cwPx*1.42;
-    const avail=Math.max(150,innerHeight-wks.getBoundingClientRect().top-16);
+    const hb=$("handbar"),hbR=hb?hb.getBoundingClientRect():null;
+    if(hbR)document.documentElement.style.setProperty("--hb",Math.round(hbR.height)+"px");
+    const floor=hbR?hbR.top:innerHeight;            // fit the piles between the pot and the hand bar
+    const avail=Math.max(130,floor-wks.getBoundingClientRect().top-12);
     let OFF=22;if(maxLen>1)OFF=Math.max(15,Math.min(22,(avail-cardH)/(maxLen-1)));
     for(let pi=0;pi<4;pi++){const pw=document.createElement("div");pw.className="work";const col=document.createElement("div");col.className="workcol fan";const pile=you.work[pi];
       if(pile.length===0){const ph=placeholder("");ph.style.opacity=".4";col.appendChild(ph);}

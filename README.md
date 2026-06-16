@@ -15,7 +15,7 @@ It's one self-contained file, `index.html` — no build step, no dependencies. O
 - **Tap** a card to auto-play it — to the pot if it fits, otherwise onto a work pile. If it fits more than one spot, those spots light up so you can **drag** it where you want.
 - **Drag** a card to place it exactly where you want — the pot or a work pile. Valid spots light up while you drag.
 - An **empty pile is wild** — you can move any card onto it.
-- **Tap the deck** to flip a fresh card into your waste.
+- Your **deck and current card sit at the bottom** (thumb reach). Tap the deck to flip a fresh card, then tap or drag that card up into the pot or onto a work pile.
 - Build your **work piles** down in alternating colours (red 7 on black 8) to free buried cards.
 
 First launch drops you straight into a guided match with a couple of in-context tips (no setup screen). A **?** button shows the rules anytime, and **Options** on the start screen tweaks match length / bot pressure. At the buzzer, **📲 Share my result** opens your phone's share sheet (Messages, etc.) with a quick brag card and a link back to the game.
