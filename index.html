@@ -102,6 +102,10 @@
   .handbar .hintbar{margin:0}
   .youstat{font-size:12px;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:6px;white-space:nowrap}
   .youstat b{color:var(--good);font-size:16px}
+  .best{color:var(--gold);font-weight:800;font-size:11px;white-space:nowrap}
+  .best.nb{text-shadow:0 0 10px rgba(255,210,63,.9)}
+  .pbline{text-align:center;font-weight:800;font-size:13px;color:var(--muted);margin:2px 0 6px}
+  .pbline.nb{color:#0e1022;background:var(--gold);border-radius:10px;padding:9px;font-size:15px;box-shadow:0 0 26px rgba(255,210,63,.55)}
   .works{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .work{min-height:150px;background:rgba(255,255,255,.02);border:1px dashed #2c2f52;border-radius:10px;padding:6px;position:relative;touch-action:none;transition:box-shadow .1s,border-color .1s,background .1s,transform .1s}
   .work.drop-ok{border:2px dashed var(--good);background:rgba(70,224,138,.08)}
@@ -200,11 +204,6 @@
 
 <div class="handbar" id="handbar">
   <div class="hb-inner">
-    <div class="hintbar" id="hintbar">
-      <span class="ic">💡</span>
-      <span class="txt" id="hinttext">Tap your card to play it up to the pot or a pile. Tap the deck for a new card.</span>
-      <button class="hintbtn" id="hintbtn">Hint</button>
-    </div>
     <div class="hb-cards">
       <div class="slot"><div class="lab">Deck · tap</div><div id="stock"></div></div>
       <div class="slot"><div class="lab">Your card</div><div id="waste"></div></div>
@@ -226,6 +225,7 @@
   <div class="panel" style="text-align:center">
     <h1>Stackdown</h1>
     <div class="tag">A 3-minute solitaire showdown. Race 3 rivals to stack the most cards into one shared pot.</div>
+    <div id="startbest" style="color:var(--gold);font-weight:700;font-size:12px;margin:-6px 0 14px"></div>
     <button class="btn" id="playbtn" style="width:100%;font-size:18px;padding:14px">▶&nbsp; Play</button>
     <div class="row" style="margin-top:14px;gap:20px"><button class="linkbtn" id="howlink">How to play</button><button class="linkbtn" id="optlink">Options</button></div>
     <div id="optblock" style="display:none;margin-top:12px;text-align:left">
@@ -298,7 +298,7 @@
   function seen(){try{return !!localStorage.getItem("sd_seen");}catch(e){return false;}}
   function markSeen(){try{localStorage.setItem("sd_seen","1");}catch(e){}}
 
-  let matchesPlayed=0, wins=0, lastResult=null;
+  let matchesPlayed=0, wins=0, lastResult=null, bestPot=0, beatBest=false;
   const SUITS=["H","D","C","S"], REDS={H:1,D:1};
   const PCOLORS=["--p0","--p1","--p2","--p3"];
   const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
@@ -346,7 +346,8 @@
     if(card.rank===13){p.crowns+=1;txt="👑";big=true;cls="--gold";}
     else if(p.potTimes.length>=3){txt="🔥 +1";}
     pop(txt,null,cls,big);
-    if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");}}
+    if(!p.isBot){const c=$("combo");if(p.potTimes.length>=3){c.classList.add("on");c.textContent="COMBO ×"+p.potTimes.length;}else c.classList.remove("on");
+      if(bestPot>0&&!beatBest&&p.potCards>bestPot){beatBest=true;pop("🌟 NEW BEST!",null,"--gold",true);toast("🌟 New personal best — "+p.potCards+" cards!",2200);}}}
   function checkClear(p){if(!p.cleared&&boardEmpty(p)){p.cleared=true;pop("🎉 CLEARED!",null,p.color,true);if(p.isBot)flashOpp(p.index);}}
 
   // moves
@@ -469,6 +470,7 @@
     {const pc=$("potcount");if(pc)pc.textContent=foundations.length?foundations.length+" piles open":"";}
 
     const you=players[0];$("youpot").textContent=you.potCards;
+    {const yb=$("youbest");if(yb){if(beatBest){yb.textContent="★ best "+you.potCards;yb.classList.add("nb");}else{yb.textContent=bestPot>0?("best "+bestPot):"";yb.classList.remove("nb");}}}
     const pl=$("place");
     if(pl){if(!showRivals){pl.style.display="none";}else{pl.style.display="";const yv=score(you);let better=0;
       for(const q of players){if(q===you)continue;if(score(q)>yv||(score(q)===yv&&q.crowns>you.crowns))better++;}
@@ -503,21 +505,10 @@
       col.style.height=Math.max(120,(pile.length-1)*OFF+cardH+8)+"px";pw.appendChild(col);wks.appendChild(pw);}
 
     applyTapHints();
-    updateHint();
   }
 
-  // hint bar (neutral by default; specifics only on demand)
-  function hint(msg,kind){hintMsg=msg;hintKind=kind||"";hintUntil=Date.now()+2800;updateHint();}
-  function updateHint(){const bar=$("hintbar"),txt=$("hinttext"),ic=bar.querySelector(".ic");let msg,kind="";
-    if(hintMsg&&Date.now()<hintUntil){msg=hintMsg;kind=hintKind;}
-    else{const p=players[0];msg=anyPotMove(p)?"Tap a card to send it to the pot, or drag to place it on your board.":"No pot play right now — tap the deck to flip, or drag a card onto a pile to set up.";}
-    txt.textContent=msg;bar.className="hintbar"+(kind?(" "+kind):"");ic.textContent=kind==="warn"?"⚠️":"💡";}
-  function giveHint(){const p=players[0];track("hint_used");
-    const tops=[{s:{type:"waste"},c:p.waste.length?last(p.waste):null}];
-    for(let i=0;i<4;i++)tops.push({s:{type:"work",pi:i,start:p.work[i].length-1},c:p.work[i].length?last(p.work[i]):null});
-    for(const t of tops){if(t.c&&foundationFor(t.c)){hint(`Try playing the ${rankTxt(t.c.rank)}${suitSym(t.c.suit)} into the pot.`,"");return;}}
-    for(let a=0;a<4;a++){const pile=p.work[a];if(!pile.length)continue;const run=runFrom(pile,pile.length-1);if(!run)continue;for(let b=0;b<4;b++){if(a!==b&&canStackWork(run[0],p.work[b])){const t=last(p.work[b]);hint(`Move the ${rankTxt(run[0].rank)}${suitSym(run[0].suit)} onto the ${rankTxt(t.rank)}${suitSym(t.suit)} to free a card.`,"");return;}}}
-    hint("Nothing obvious — tap the deck to flip a new card.","");}
+  // brief, transient guidance via toast (the always-on hint bar was removed as clutter)
+  function hint(msg,kind){toast(msg,kind==="warn"?2200:1700);}
 
   // fx
   function pop(text,anchorEl,colorVar,big){const fx=$("fx");const d=document.createElement("div");d.className="pop"+(big?" big":"");d.textContent=text;d.style.color=`var(${colorVar})`;let x=innerWidth/2,y=innerHeight*0.42;const ref=anchorEl||$("pot");if(ref){const r=ref.getBoundingClientRect();x=r.left+r.width/2;y=r.top+r.height/2;}d.style.left=x+"px";d.style.top=y+"px";fx.appendChild(d);setTimeout(()=>d.remove(),1000);}
@@ -550,7 +541,7 @@
     if(timeLeft===60)toast("⏱ One minute left!",2000);
     else if(timeLeft===10)toast("⏱ Final 10 seconds!",1800);
     if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(timeLeft<=30?" heat":"");}else render();}
-  function startMatch(){NPLAYERS=4;firstPotDone=false;matchStartMs=performance.now();
+  function startMatch(){NPLAYERS=4;firstPotDone=false;beatBest=false;matchStartMs=performance.now();
     $("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
     const firstTime=!seen();curFirstTime=firstTime;coaching=false;coachIdx=0;teachKind=null;revealRivals=!firstTime;
     setup();if(firstTime)dealForCoaching();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
@@ -559,15 +550,20 @@
   function endGame(){running=false;clearInterval(timerId);stopBots();coaching=false;teachKind=null;$("coach").classList.remove("on");
     const ranked=players.map(p=>({p,final:p.potCards})).sort((a,b)=>b.final-a.final||b.p.crowns-a.p.crowns);const win=ranked[0].p;
     const you0=players[0],myPlace=ranked.findIndex(r=>r.p.index===0)+1;
-    lastResult={place:myPlace,pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0};
+    const prevBest=bestPot,setNew=you0.potCards>prevBest,reallyNew=setNew&&prevBest>0;
+    if(setNew){bestPot=you0.potCards;try{localStorage.setItem("sd_best",String(bestPot));}catch(e){}}
+    lastResult={place:myPlace,pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0,best:bestPot,newBest:reallyNew};
     matchesPlayed++; if(win.index===0) wins++;
-    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:curFirstTime,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,match_no:matchesPlayed});
+    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:curFirstTime,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,best:bestPot,new_best:reallyNew,match_no:matchesPlayed});
     $("endtitle").textContent=win.index===0?"You win! 🏆":win.name+" wins";
     $("endsub").textContent=win.index===0?`You stacked ${ranked[0].final} cards into the pot — the most of anyone.`:`Most cards into the pot wins. You played ${you0.potCards}; ${win.name} played ${ranked[0].final}.`;
+    {const pb=$("pbline");if(pb){if(reallyNew){pb.className="pbline nb";pb.textContent="🌟 New personal best — "+you0.potCards+" cards!";}else{pb.className="pbline";pb.textContent="Personal best: "+bestPot+" cards";}}}
     const pod=$("podium");pod.innerHTML="";ranked.forEach((r,idx)=>{const p=r.p;const row=document.createElement("div");row.className="pr"+(idx===0?" win":"");
       row.innerHTML=`<div class="rk">${idx+1}</div><div class="nm"><span class="dot" style="color:var(${p.color})"></span>${p.name}<span class="bd">${p.crowns?("👑"+p.crowns+" · "):""}${p.cleared?"cleared!":"cards in pot"}</span></div><div class="sc" style="color:var(${p.color})">${p.potCards}</div>`;pod.appendChild(row);});
-    $("endov").style.display="flex";if(win.index===0)cascade();}
+    $("endov").style.display="flex";if(win.index===0||reallyNew)cascade();}
   function cascade(){const layer=$("cascade");layer.innerHTML="";const cols=14;for(let i=0;i<70;i++){const c=document.createElement("div");c.className="cc";c.style.left=((i%cols)/(cols-1)*100)+"%";c.style.top="-60px";const dur=1.6+Math.random()*1.4,delay=Math.random()*1.2;c.style.transition=`transform ${dur}s cubic-bezier(.4,0,.7,1) ${delay}s`;layer.appendChild(c);requestAnimationFrame(()=>requestAnimationFrame(()=>{c.style.transform=`translateY(${innerHeight+120}px) rotate(${(Math.random()*2-1)*220}deg)`;}));}setTimeout(()=>layer.innerHTML="",4200);}
+
+  function refreshStartBest(){const e=$("startbest");if(e)e.textContent=bestPot>0?("⭐ Your personal best: "+bestPot+" cards — beat it!"):"";}
 
   // chrome
   function seg(id,cb){$(id).querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{$(id).querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cb(parseFloat(b.dataset.v));}));}
@@ -577,7 +573,7 @@
   $("howlink").addEventListener("click",openRules);
   $("optlink").addEventListener("click",()=>{const o=$("optblock");o.style.display=o.style.display==="none"?"block":"none";if(o.style.display==="block")track("options_opened");});
   $("again").addEventListener("click",startMatch);
-  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){if(running)track("match_quit",{pot:players[0].potCards,elapsed:MATCH_SECS-timeLeft,secs:MATCH_SECS});running=false;clearInterval(timerId);stopBots();$("startov").style.display="flex";}});
+  $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){if(running)track("match_quit",{pot:players[0].potCards,elapsed:MATCH_SECS-timeLeft,secs:MATCH_SECS});running=false;clearInterval(timerId);stopBots();refreshStartBest();$("startov").style.display="flex";}});
   $("helpbtn").addEventListener("click",openRules);
   $("rulesclose").addEventListener("click",()=>{$("rulesov").style.display="none";});
 
@@ -591,7 +587,7 @@
     const ord=["","1st","2nd","3rd","4th"][r.place]||(r.place+"th");
     const taunt=r.won?"Can you beat me? 🏆":"Bet you can't beat me 😤";
     const url=location.origin+location.pathname;
-    return `STACKDOWN ⚡ ${fmtSecs(r.secs)}\n${medal} ${ord} of ${r.players} — ${r.pot} cards in the pot 🃏${r.crowns?` · 👑${r.crowns}`:""}${r.cleared?" · ✅ cleared!":""}\n${taunt}\n👉 ${url}`;}
+    return `STACKDOWN ⚡ ${fmtSecs(r.secs)}\n${medal} ${ord} of ${r.players} — ${r.pot} cards in the pot 🃏${r.crowns?` · 👑${r.crowns}`:""}${r.cleared?" · ✅ cleared!":""}${r.newBest?"\n🌟 New personal best!":""}\n${taunt}\n👉 ${url}`;}
   function shareResult(){
     const r=lastResult;if(!r)return;const text=shareText(r);track("share",{pot:r.pot,place:r.place,won:r.won});
     if(navigator.share){navigator.share({title:"Stackdown",text:text}).catch(function(){});}
@@ -617,13 +613,14 @@
   $("fbresults").addEventListener("click",openFeedback);
   $("fbclose").addEventListener("click",closeFeedback);
   $("fbsend").addEventListener("click",sendFeedback);
-  $("hintbtn").addEventListener("click",giveHint);
   let _rz=null;window.addEventListener("resize",function(){clearTimeout(_rz);_rz=setTimeout(function(){if(!drag)render();},120);});
   document.addEventListener("pointermove",onPointerMove,{passive:false});
   document.addEventListener("pointerup",onPointerUp);
   document.addEventListener("pointercancel",onPointerUp);
 
+  try{bestPot=parseInt(localStorage.getItem("sd_best")||"0",10)||0;}catch(e){}
   initAnalytics();track("app_open");
+  refreshStartBest();
   setup();render();running=false;
 })();
 </script>
