@@ -322,7 +322,7 @@
   let hintMsg=null, hintKind="", hintUntil=0;
   let humanTimes=[], dragLock=false, prevWasteId=null;
   let coaching=false, coachIdx=0, teachKind=null, revealRivals=false;
-  let firstPotDone=false, matchStartMs=0, curFirstTime=false;
+  let firstPotDone=false, matchStartMs=0, curFirstTime=false, workMoves=0;
 
   const $=id=>document.getElementById(id);
   const last=a=>a[a.length-1];
@@ -375,7 +375,7 @@
     if(src.type==="waste")run=p.waste.length?[last(p.waste)]:null;else run=runFrom(p.work[src.pi],src.start);
     if(!run||!run.length)return false;if(src.type==="work"&&src.pi===destPi)return false;if(!canStackWork(run[0],dest))return false;
     if(src.type==="waste")p.waste.pop();else p.work[src.pi].splice(src.start);
-    for(const c of run)dest.push(c);checkClear(p);render();return true;}
+    for(const c of run)dest.push(c);if(!p.isBot)workMoves++;checkClear(p);render();return true;}
   function draw(p){if(p.stock.length===0){if(p.waste.length===0||p.redeals>=REDEAL_MAX)return false;p.redeals++;p.stock=p.waste.reverse();p.waste=[];}p.waste.push(p.stock.pop());render();return true;}
 
   // ---- human tempo (bots learn from this) ----
@@ -576,7 +576,7 @@
     if(timeLeft===60)toast("⏱ One minute left!",2000);
     else if(timeLeft===10)toast("⏱ Final 10 seconds!",1800);
     if(timeLeft<=0){timeLeft=0;if(!drag)render();endGame();return;}if(drag){const m=Math.floor(timeLeft/60),s=timeLeft%60;const tEl=$("timer");tEl.textContent=m+":"+(s<10?"0":"")+s;tEl.className="timer"+(timeLeft<=30?" heat":"");}else render();}
-  function startMatch(){NPLAYERS=4;firstPotDone=false;beatBest=false;matchStartMs=performance.now();
+  function startMatch(){NPLAYERS=4;firstPotDone=false;beatBest=false;workMoves=0;matchStartMs=performance.now();
     $("startov").style.display="none";$("endov").style.display="none";$("coach").classList.remove("on");
     const firstTime=!seen();curFirstTime=firstTime;coaching=false;coachIdx=0;teachKind=null;revealRivals=!firstTime;
     setup();if(firstTime)dealForCoaching();render();startBots();clearInterval(timerId);timerId=setInterval(tick,1000);
@@ -589,7 +589,7 @@
     if(setNew){bestPot=you0.potCards;try{localStorage.setItem("sd_best",String(bestPot));}catch(e){}}
     lastResult={place:myPlace,pot:you0.potCards,crowns:you0.crowns,cleared:you0.cleared,players:NPLAYERS,secs:MATCH_SECS,won:win.index===0,best:bestPot,newBest:reallyNew};
     matchesPlayed++; if(win.index===0) wins++;
-    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:curFirstTime,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,best:bestPot,new_best:reallyNew,match_no:matchesPlayed});
+    track("match_end",{pot:you0.potCards,place:myPlace,players:NPLAYERS,secs:MATCH_SECS,bot_factor:BOT_FACTOR,first_time:curFirstTime,crowns:you0.crowns,cleared:you0.cleared,won:win.index===0,best:bestPot,new_best:reallyNew,work_moves:workMoves,match_no:matchesPlayed});
     $("endtitle").textContent=win.index===0?"You win! 🏆":win.name+" wins";
     $("endsub").textContent=win.index===0?`You stacked ${ranked[0].final} cards into the pot — the most of anyone.`:`Most cards into the pot wins. You played ${you0.potCards}; ${win.name} played ${ranked[0].final}.`;
     {const pb=$("pbline");if(pb){if(reallyNew){pb.className="pbline nb";pb.textContent="🌟 New personal best — "+you0.potCards+" cards!";}else{pb.className="pbline";pb.textContent="Personal best: "+bestPot+" cards";}}}
