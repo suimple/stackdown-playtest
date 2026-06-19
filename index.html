@@ -63,8 +63,8 @@
   .pot-h{display:flex;align-items:center;gap:8px;margin:6px 2px}
   .pot-h b{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
   .pot-h .line{flex:1;height:1px;background:linear-gradient(90deg,#2c2f52,transparent)}
-  .pot{min-height:84px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:10px;border-radius:14px;
-    background:repeating-linear-gradient(45deg,#1a1f3d 0 12px,#191d39 12px 24px);border:1px solid #2c2f52;touch-action:none;transition:box-shadow .12s,outline-color .12s}
+  .pot{min-height:90px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;padding:12px;border-radius:16px;
+    background:radial-gradient(130% 130% at 50% 0%, #26406e 0%, #15203c 72%);border:1.5px solid #4663a0;box-shadow:inset 0 0 34px rgba(25,224,200,.08),0 6px 20px rgba(0,0,0,.4);touch-action:none;transition:box-shadow .12s,outline-color .12s}
   .pot .card{--cw:var(--potcw,clamp(34px,9vw,44px))}   /* reference-only; --potcw is set per-render to fit all piles */
   .pot.drop-ok{outline:3px dashed var(--gold);outline-offset:3px;box-shadow:inset 0 0 30px rgba(255,210,63,.25)}
   .pot.drop-hot{outline:3px solid var(--gold);outline-offset:3px;box-shadow:inset 0 0 46px rgba(255,210,63,.55)}
@@ -133,6 +133,8 @@
 
   .ph{width:var(--cw);height:var(--ch);--cw:clamp(40px,12.5vw,58px);--ch:calc(var(--cw)*1.42);border-radius:7px;border:1.5px dashed #3a3f6b;display:flex;align-items:center;justify-content:center;color:#3a3f6b;font-size:20px}
   .count{position:absolute;bottom:-7px;right:-7px;background:#0e1022;border:1px solid #2c2f52;color:var(--ink);font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px}
+  .redeal{position:absolute;top:-7px;left:-7px;background:#0e1022;border:1px solid #2c2f52;color:var(--muted);font-size:10px;font-weight:800;border-radius:10px;padding:1px 6px}
+  .redeal.out{color:#ff8094;border-color:#6b3a44}
   .stock{cursor:pointer}
   .fnd{position:relative;flex:0 0 auto}
   .fnd .crown{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:13px;filter:drop-shadow(0 0 6px var(--gold))}
@@ -313,6 +315,7 @@
   const PCOLORS=["--p0","--p1","--p2","--p3"];
   const NAMES=["You","Bot Hazel","Bot Zane","Bot Ruby"];
   const STREAK_WINDOW=5000;
+  const REDEAL_MAX=3;   // recycles allowed per match — caps mindless stock-spamming (tunable)
   let MATCH_SECS=180, BOT_FACTOR=1.7, NPLAYERS=4;
 
   let players=[], foundations=[], timeLeft=0, timerId=null, running=false;
@@ -331,7 +334,7 @@
     for(let i=d.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[d[i],d[j]]=[d[j],d[i]];}return d;}
   function newPlayer(i){const deck=makeDeck(i);return{index:i,name:NAMES[i],color:PCOLORS[i],isBot:i!==0,
     work:[[deck[0]],[deck[1]],[deck[2]],[deck[3]]],stock:deck.slice(4),waste:[],
-    potCards:0,crowns:0,cleared:false,potTimes:[],_t:null};}
+    potCards:0,crowns:0,cleared:false,redeals:0,potTimes:[],_t:null};}
   function setup(){players=[];for(let i=0;i<NPLAYERS;i++)players.push(newPlayer(i));foundations=[];timeLeft=MATCH_SECS;running=true;hintMsg=null;humanTimes=[];prevWasteId=null;}
   // For a first-time coached match, guarantee the player has an Ace ready to play.
   function dealForCoaching(){const me=players[0];
@@ -373,7 +376,7 @@
     if(!run||!run.length)return false;if(src.type==="work"&&src.pi===destPi)return false;if(!canStackWork(run[0],dest))return false;
     if(src.type==="waste")p.waste.pop();else p.work[src.pi].splice(src.start);
     for(const c of run)dest.push(c);checkClear(p);render();return true;}
-  function draw(p){if(p.stock.length===0){if(p.waste.length===0)return false;p.stock=p.waste.reverse();p.waste=[];}p.waste.push(p.stock.pop());render();return true;}
+  function draw(p){if(p.stock.length===0){if(p.waste.length===0||p.redeals>=REDEAL_MAX)return false;p.redeals++;p.stock=p.waste.reverse();p.waste=[];}p.waste.push(p.stock.pop());render();return true;}
 
   // ---- human tempo (bots learn from this) ----
   function noteHuman(){humanTimes.push(Date.now());if(humanTimes.length>8)humanTimes.shift();}
@@ -475,9 +478,9 @@
     const pot=$("pot");pot.innerHTML="";
     if(foundations.length===0){const e=document.createElement("div");e.className="empty";e.innerHTML="The pot is empty.<br>Play an <b>Ace</b> here to open the first pile.";pot.appendChild(e);}
     else foundations.forEach((f,fi)=>{const w=document.createElement("div");w.className="fnd";w.dataset.fi=fi;const top=last(f.cards);if(top.rank===13){const cr=document.createElement("div");cr.className="crown";cr.textContent="👑";w.appendChild(cr);}w.appendChild(faceCard(top));const cnt=document.createElement("div");cnt.className="count";cnt.textContent=f.cards.length;w.appendChild(cnt);pot.appendChild(w);});
-    // adaptive pot card size: shrink as more piles open so all stay visible (~2 rows) without scrolling
-    {const n=foundations.length,potW=pot.getBoundingClientRect().width-20;
-     if(n&&potW>40){const perRow=Math.ceil(n/2),cw=Math.max(22,Math.min(44,Math.floor((potW-6*(perRow-1))/perRow)));pot.style.setProperty("--potcw",cw+"px");}
+    // pot cards: big when the pot is fresh, shrinking as it crowds (all stay visible, no scroll)
+    {const n=foundations.length;
+     if(n)pot.style.setProperty("--potcw",Math.max(24,Math.min(58,Math.round(58-(n-2)*2.4)))+"px");
      else pot.style.removeProperty("--potcw");}
     {const pc=$("potcount");if(pc)pc.textContent=foundations.length?foundations.length+" piles open":"";}
 
@@ -489,9 +492,11 @@
       const rank=better+1;pl.textContent=(["","1st","2nd","3rd","4th"][rank]||rank+"th")+" of "+NPLAYERS;pl.classList.toggle("lead",rank===1);}}
 
     const sEl=$("stock");sEl.innerHTML="";const sw=document.createElement("div");sw.style.position="relative";
+    const redealsLeft=Math.max(0,REDEAL_MAX-you.redeals);
     if(you.stock.length){const b=document.createElement("div");b.className="card back stock";b.style.setProperty("--bc","var(--p0)");b.addEventListener("pointerdown",onStockTap);sw.appendChild(b);const cnt=document.createElement("div");cnt.className="count";cnt.textContent=you.stock.length;sw.appendChild(cnt);}
-    else{const ph=placeholder("↻");ph.classList.add("stock");ph.addEventListener("pointerdown",onStockTap);sw.appendChild(ph);}
-    if(teachKind==="deck")sw.firstChild.classList.add("teach");sEl.appendChild(sw);
+    else{const ph=placeholder(redealsLeft>0?"↻":"✕");ph.classList.add("stock");if(redealsLeft<=0){ph.style.color="#6b3a44";ph.style.borderColor="#6b3a44";}ph.addEventListener("pointerdown",onStockTap);sw.appendChild(ph);}
+    if(you.redeals>0||you.stock.length===0){const rb=document.createElement("div");rb.className="redeal"+(redealsLeft===0?" out":"");rb.textContent="↻"+redealsLeft;sw.appendChild(rb);}
+    if(teachKind==="deck"&&sw.firstChild)sw.firstChild.classList.add("teach");sEl.appendChild(sw);
 
     const wEl=$("waste");wEl.innerHTML="";
     if(you.waste.length){const top=last(you.waste);const c=faceCard(top);attachDrag(c,{type:"waste"});if(teachKind==="ace"&&top.rank===1&&foundationFor(top))c.classList.add("teach");if(prevWasteId&&prevWasteId!==top.id)c.classList.add("enter");prevWasteId=top.id;wEl.appendChild(c);}else{prevWasteId=null;wEl.appendChild(placeholder(""));}
@@ -528,7 +533,9 @@
   function flashOpp(i){const el=document.querySelector('.opp[data-pi="'+i+'"]');if(el){el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");}}
   let toastT=null;function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),ms||1600);}
 
-  function onStockClick(){if(!draw(players[0]))hint("No cards left to flip.","warn");else{noteHuman();coachGate("draw");}}
+  function onStockClick(){const p=players[0];if(draw(p)){noteHuman();coachGate("draw");}
+    else if(p.stock.length===0&&p.waste.length>0)hint("No more redeals — play from your board.","warn");
+    else hint("No cards left to flip.","warn");}
   // pointerdown (not click) so rapid flips never get dropped when the board re-renders mid-tap
   function onStockTap(e){if(e&&e.button>0)return;if(e&&e.preventDefault)e.preventDefault();onStockClick();}
 
