@@ -178,6 +178,13 @@
   .coach .msg{font-size:14px;line-height:1.45}
   .coach .acts{display:flex;gap:10px;align-items:center;margin-top:10px}
 
+  /* show-don't-tell onboarding: a dimming spotlight over the one thing to touch */
+  #spot{position:fixed;z-index:46;pointer-events:none;border-radius:12px;display:none;box-shadow:0 0 0 100vmax rgba(8,9,20,.80);outline:3px solid var(--gold);transition:left .15s,top .15s,width .15s,height .15s;animation:spotpulse 1.2s infinite}
+  @keyframes spotpulse{50%{outline-color:#fff7cf}}
+  #spotcap{position:fixed;z-index:47;pointer-events:none;display:none;max-width:82vw;text-align:center;background:var(--gold);color:#0e1022;font-weight:800;font-size:14px;line-height:1.25;padding:9px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  #spotcap.on{display:block}
+  #coachskip{position:fixed;top:10px;left:10px;z-index:49;display:none;background:rgba(14,16,34,.85);border:1px solid #343a66;color:var(--muted);font:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer}
+
   #fx{position:fixed;inset:0;pointer-events:none;z-index:40}
   .pop{position:absolute;font-weight:900;font-size:20px;transform:translate(-50%,-50%);text-shadow:0 2px 8px rgba(0,0,0,.6);animation:pop 1s ease-out forwards}
   .pop.big{font-size:30px}
@@ -220,6 +227,9 @@
   <div class="msg" id="coachmsg"></div>
   <div class="acts" id="coachacts"></div>
 </div>
+<div id="spot"></div>
+<div id="spotcap"></div>
+<button id="coachskip">Skip ›</button>
 
 <div class="ov" id="startov">
   <div class="panel" style="text-align:center">
@@ -425,6 +435,8 @@
       if(dest.length===0)empties.push(pi);else if(canStackWork(run[0],dest))stacks.push(pi);}
     return {run,pot,stacks,empties};}
   function handleTap(src){clearHighlights();const p=players[0];const t=tapTargets(src);if(!t){render();return;}
+    // during the guided 'tap the Ace' step, always send it to the pot so the lesson is deterministic
+    if(coaching){const cs=COACH[coachIdx];if(cs&&cs.gate==="pot"&&t.pot){if(playToFoundation(p,src)){noteHuman();coachGate("pot");}return;}}
     const meaningful=(t.pot?1:0)+t.stacks.length;
     if(meaningful===1){if(t.pot){if(playToFoundation(p,src)){noteHuman();coachGate("pot");}}
       else if(moveToWork(p,src,t.stacks[0])){noteHuman();coachGate("work");}return;}
@@ -505,6 +517,7 @@
       col.style.height=Math.max(120,(pile.length-1)*OFF+cardH+8)+"px";pw.appendChild(col);wks.appendChild(pw);}
 
     applyTapHints();
+    positionSpot();
   }
 
   // brief, transient guidance via toast (the always-on hint bar was removed as clutter)
@@ -519,22 +532,37 @@
   // pointerdown (not click) so rapid flips never get dropped when the board re-renders mid-tap
   function onStockTap(e){if(e&&e.button>0)return;if(e&&e.preventDefault)e.preventDefault();onStockClick();}
 
-  // ---- first-time in-game coaching (non-blocking, runs during a real match) ----
+  // ---- first-time onboarding: SHOW, don't tell. Spotlight one action at a time,
+  //      dim the rest, and let the action itself teach. Each step is gated on doing it. ----
   const COACH=[
-    {t:"Welcome! Your goal: get more cards into the <b>pot</b> in the middle than the bots. Tap the glowing <b>Ace</b> to start the first pile.",gate:"pot",teach:"ace"},
-    {t:"That's <b>1 in the pot</b> 🃏 — see the scores up top? You're racing <b>3 bots</b> for the most cards before the buzzer.",reveal:true,btn:"Got it"},
-    {t:"Tap any card to auto-play it. Out of moves? Tap the <b>deck</b> to flip a new card. That's it — go stack 'em!",btn:"Let's play"}
+    {teach:"ace",  cap:"Tap the glowing card →",                 gate:"pot",  dim:true},
+    {at:"opps",    cap:"You're racing 3 bots — most cards wins", reveal:true, auto:2400},
+    {teach:"deck", cap:"Out of moves? Tap the deck",             gate:"draw", dim:true}
   ];
+  let coachAuto=null;
   function startCoaching(){coaching=true;coachIdx=0;track("coach_start");showCoach();}
   function showCoach(){const s=COACH[coachIdx];if(!s){endCoaching(true);return;}
     teachKind=s.teach||null;if(s.reveal)revealRivals=true;
-    const c=$("coach");c.classList.add("on");$("coachstep").textContent="Tip "+(coachIdx+1)+" / "+COACH.length;$("coachmsg").innerHTML=s.t;
-    const acts=$("coachacts");acts.innerHTML="";
-    if(s.btn){const b=document.createElement("button");b.className="btn";b.textContent=s.btn;b.onclick=function(){coachIdx++;showCoach();};acts.appendChild(b);}
-    const bail=document.createElement("button");bail.className="linkbtn";bail.textContent="Skip tips";bail.style.marginLeft="auto";bail.onclick=function(){endCoaching(false);};acts.appendChild(bail);
-    render();}
+    if(coachAuto){clearTimeout(coachAuto);coachAuto=null;}
+    render();                                  // render paints the teach glow and positions the spotlight
+    if(s.auto)coachAuto=setTimeout(function(){coachIdx++;showCoach();},s.auto);}
   function coachGate(type){if(!coaching)return;const s=COACH[coachIdx];if(s&&s.gate===type){coachIdx++;showCoach();}}
-  function endCoaching(complete){coaching=false;teachKind=null;$("coach").classList.remove("on");revealRivals=true;markSeen();track(complete?"coach_complete":"coach_skip",{step:coachIdx});render();}
+  function endCoaching(complete){coaching=false;teachKind=null;if(coachAuto){clearTimeout(coachAuto);coachAuto=null;}
+    revealRivals=true;markSeen();track(complete?"coach_complete":"coach_skip",{step:coachIdx});
+    if(complete)toast("You've got it — go! 🃏",1700);render();}
+  // place the dimming spotlight + caption over the current step's target (called from render)
+  function positionSpot(){const spot=$("spot"),cap=$("spotcap"),sk=$("coachskip");
+    const s=coaching?COACH[coachIdx]:null;if(sk)sk.style.display=coaching?"block":"none";
+    if(!s){if(spot)spot.style.display="none";if(cap)cap.classList.remove("on");return;}
+    const el=s.at==="opps"?$("opps"):(s.teach?document.querySelector(".teach"):null);
+    if(s.dim&&el){const r=el.getBoundingClientRect(),pad=10;spot.style.display="block";
+      spot.style.left=(r.left-pad)+"px";spot.style.top=(r.top-pad)+"px";spot.style.width=(r.width+2*pad)+"px";spot.style.height=(r.height+2*pad)+"px";}
+    else spot.style.display="none";
+    cap.textContent=s.cap;cap.classList.add("on");cap.style.left="50%";cap.style.transform="translateX(-50%)";
+    if(el){const r=el.getBoundingClientRect();
+      if(r.top>innerHeight*0.55){cap.style.top="auto";cap.style.bottom=(innerHeight-r.top+14)+"px";}
+      else{cap.style.bottom="auto";cap.style.top=(r.bottom+14)+"px";}}
+    else{cap.style.top="auto";cap.style.bottom="calc(var(--hb) + 22px)";}}
 
   // lifecycle
   function tick(){timeLeft--;
@@ -576,6 +604,7 @@
   $("restart").addEventListener("click",()=>{if(confirm("Start a new match?")){if(running)track("match_quit",{pot:players[0].potCards,elapsed:MATCH_SECS-timeLeft,secs:MATCH_SECS});running=false;clearInterval(timerId);stopBots();refreshStartBest();$("startov").style.display="flex";}});
   $("helpbtn").addEventListener("click",openRules);
   $("rulesclose").addEventListener("click",()=>{$("rulesov").style.display="none";});
+  $("coachskip").addEventListener("click",function(){endCoaching(false);});
 
   // feedback
   const fb={fun:null,pace:null,clear:null};
